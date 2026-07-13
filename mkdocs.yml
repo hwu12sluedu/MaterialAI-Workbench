@@ -15,6 +15,7 @@ nav:
       - Abaqus MCP 工作台: ABAQUS_MCP_WORKBENCH_CN.md
       - 案例库使用指南: CASE_LIBRARY_USER_GUIDE_CN.md
   - 项目状态:
+      - v0.1.1 补丁说明: 00_project_status/RELEASE_V0.1.1_CN.md
       - v0.1.0 发布状态: 00_project_status/RELEASE_V0.1.0_CN.md
       - 工作区整洁度报告: 00_project_status/WORKSPACE_CLEANLINESS_REPORT_CN.md
       - 里程碑复盘: 00_project_status/MILESTONE_REVIEW_CN.md

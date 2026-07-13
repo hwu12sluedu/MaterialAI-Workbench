@@ -38,6 +38,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 import warnings
+
+
+PYLABFEA_BUNDLED_VERSION = "4.4.2"
+
+
+def _pylabfea_distribution_version():
+    """Return pyLabFEA's version when bundled in another distribution."""
+    try:
+        return metadata.version("pylabfea")
+    except metadata.PackageNotFoundError:
+        return PYLABFEA_BUNDLED_VERSION
 import pickle
 from sklearn.model_selection import GridSearchCV
 from sklearn.decomposition import PCA
@@ -2164,7 +2175,6 @@ class Material(object):
         gamma value, scaling factors) in Abaqus format; and
         JSON file with name path+file+'-svm_meta.json' containing meta data in given format.
         """
-        from importlib.metadata import version
         from json import dump
         from datetime import date
 
@@ -2248,7 +2258,7 @@ class Material(object):
             },
             "Model": {
                 "Creator": "pylabfea",
-                "Version": version('pylabfea'),
+                "Version": _pylabfea_distribution_version(),
                 "Repository": "https://github.com/AHartmaier/pyLabFEA.git",
                 "Input": source,
                 "Script": sname,

@@ -16,7 +16,7 @@ from .multi_fidelity import MultiFidelityResult, train_multi_fidelity
 try:
     __version__ = version("materialai-workbench")
 except PackageNotFoundError:
-    __version__ = "0.1.0"
+    __version__ = "0.1.1"
 
 __all__ = [
     "CompositePlateConfig",

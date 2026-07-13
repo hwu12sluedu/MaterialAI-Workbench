@@ -1,13 +1,13 @@
 # MaterialAI Workbench
 
 [![CI](https://github.com/hwu12sluedu/MaterialAI-Workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/hwu12sluedu/MaterialAI-Workbench/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/badge/release-v0.1.0-2563eb)](https://github.com/hwu12sluedu/MaterialAI-Workbench/releases/tag/v0.1.0)
+[![Release](https://img.shields.io/github/v/release/hwu12sluedu/MaterialAI-Workbench)](https://github.com/hwu12sluedu/MaterialAI-Workbench/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-3776ab)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-2f855a)](LICENSE)
 
 面向机械与仿真工程师的本地 **CAE + 机器学习工作台**。项目以 pyLabFEA 为材料建模底座，把材料模型训练、复合材料微观 RVE、Abaqus 验证、案例沉淀、ODB/CSV 特征提取、代理模型和自然语言任务计划放进一个可追溯流程。
 
-> 当前公开版本是 `v0.1.0` 工程 MVP。它能完整生成和管理工作流资产；真实 Abaqus 结果只在本机已安装、已授权并由用户明确提交求解后产生。
+> 当前公开版本是 `v0.1.1` 工程 MVP。它能完整生成和管理工作流资产；真实 Abaqus 结果只在本机已安装、已授权并由用户明确提交求解后产生。
 
 ![MaterialAI Workbench 客户端](docs/assets/materialai-workbench-app.png)
 
@@ -28,7 +28,7 @@ flowchart LR
     G --> B
 ```
 
-## v0.1.0 能做什么
+## 当前版本能做什么
 
 | 工作区 | 当前能力 | 真实边界 |
 |---|---|---|

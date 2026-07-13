@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.1 - 2026-07-13
+
+Patch release for clean-install and CI compatibility.
+
+### Fixed
+
+- Fall back to bundled pyLabFEA `4.4.2` metadata when the standalone `pylabfea` distribution is not installed.
+- Add a regression test for bundled-version metadata export.
+- Scope CI to `main` and pull requests so release tags do not duplicate the full test matrix.
+- Update official GitHub actions to their current Node 24-compatible major versions.
+
 ## 0.1.0 - 2026-07-13
 
 First public engineering MVP.

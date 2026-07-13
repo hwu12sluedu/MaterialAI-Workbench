@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "materialai-workbench"
-version = "0.1.0"
+version = "0.1.1"
 description = "Local CAE and machine-learning workbench for material models, Abaqus workflows and simulation data"
 authors = [
   { name = "Han Wu", email = "wuhan0314@163.com" }
@@ -23,7 +23,6 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering :: Physics",
 ]
 keywords = ["abaqus", "finite-element", "machine-learning", "constitutive-model", "composites", "cae"]
