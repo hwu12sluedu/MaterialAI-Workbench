@@ -1,0 +1,18 @@
+services:
+  materialai-workbench:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      MATERIALAI_RUNS_ROOT: /data/runs
+      MATERIALAI_CASES_ROOT: /data/cases
+      MATERIALAI_BATCHES_ROOT: /data/batches
+      MATERIALAI_SURROGATES_ROOT: /data/surrogates
+      MATERIALAI_IMPORTS_ROOT: /data/imports
+      MATERIALAI_DATASETS_ROOT: /data/datasets
+      MATERIALAI_COMPOSITE_ROOT: /data/composite_runs
+      MATERIALAI_COMPOSITE_BATCH_ROOT: /data/composite_batches
+      MATERIALAI_COMPOSITE_SURROGATE_ROOT: /data/composite_surrogates
+      MATERIALAI_CLOSED_LOOP_ROOT: /data/closed_loop_reports
+    volumes:
+      - ./workspace:/data

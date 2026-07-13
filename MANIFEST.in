@@ -1,0 +1,12 @@
+include README.md
+include LICENSE
+include THIRD_PARTY_LICENSES
+include NOTICE.md
+include CHANGELOG.md
+recursive-include material_ai_workbench/library *.json
+recursive-include material_ai_workbench/docs *.md
+recursive-include material_ai_workbench/specs *.md
+recursive-include material_ai_workbench/resources *.f *.inp *.py *.md
+recursive-include docs *.md
+recursive-include docs/assets *.png
+recursive-include examples/UMAT *.inp *.f *.py *.md *.csv *.json

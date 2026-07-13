@@ -1,0 +1,86 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "materialai-workbench"
+version = "0.1.0"
+description = "Local CAE and machine-learning workbench for material models, Abaqus workflows and simulation data"
+authors = [
+  { name = "Han Wu", email = "wuhan0314@163.com" }
+]
+maintainers = [{ name = "Han Wu", email = "wuhan0314@163.com" }]
+readme = "README.md"
+license = "GPL-3.0-or-later"
+license-files = [ "LICENSE" ]
+requires-python = ">=3.10"
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Manufacturing",
+  "Natural Language :: Chinese (Simplified)",
+  "Natural Language :: English",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+keywords = ["abaqus", "finite-element", "machine-learning", "constitutive-model", "composites", "cae"]
+dependencies = [
+  "numpy",
+  "matplotlib",
+  "scipy",
+  "scikit-learn",
+  "Pillow",
+  "ipympl"
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "black", "build", "twine", "mkdocs", "mkdocs-material"]
+app = ["streamlit", "pandas", "plotly>=6.0"]
+
+[project.scripts]
+materialai-streamlit = "material_ai_workbench.run_streamlit:main"
+materialai-workbench = "material_ai_workbench.run_workbench:main"
+materialai-composite = "material_ai_workbench.run_composite_workflow:main"
+materialai-composite-batch = "material_ai_workbench.run_composite_batch:main"
+materialai-composite-closed-loop = "material_ai_workbench.run_composite_closed_loop:main"
+materialai-metal-closed-loop = "material_ai_workbench.run_metal_closed_loop:main"
+materialai-product-closed-loop = "material_ai_workbench.run_product_closed_loop:main"
+
+[tool.setuptools]
+packages = [
+  "pylabfea",
+  "material_ai_workbench",
+  "material_ai_workbench.library",
+  "material_ai_workbench.docs",
+  "material_ai_workbench.specs",
+  "material_ai_workbench.resources",
+  "material_ai_workbench.resources.umat",
+]
+
+[tool.setuptools.package-dir]
+pylabfea = "src/pylabfea"
+material_ai_workbench = "material_ai_workbench"
+
+[tool.setuptools.package-data]
+material_ai_workbench = [
+  "library/*.json",
+  "docs/*.md",
+  "specs/*.md",
+  "resources/umat/*.f",
+  "resources/umat/*.inp",
+  "resources/umat/*.md",
+]
+
+[tool.pytest.ini_options]
+markers = [
+  "slow: long-running upstream pyLabFEA validation tests that are excluded from fast CI",
+]
+
+[project.urls]
+Homepage = "https://github.com/hwu12sluedu/MaterialAI-Workbench"
+Repository = "https://github.com/hwu12sluedu/MaterialAI-Workbench"
+Documentation = "https://github.com/hwu12sluedu/MaterialAI-Workbench/tree/main/docs"
+"Upstream pyLabFEA" = "https://github.com/AHartmaier/pyLabFEA"

@@ -1,0 +1,18 @@
+# Local machine override example.
+# Do not commit configs/local.yaml or any file containing API keys.
+
+workspace_root: D:/githubproject/pyLabFEA/workspace/material_ai_workbench
+
+abaqus:
+  command: D:/ABAQUS/2023/Commands/abaqus.bat
+  smapython: D:/ABAQUS/2023/EstProducts/win_b64/code/bin/SMAPython.exe
+  mcp_host: 127.0.0.1
+  mcp_port: 48152
+  default_cpus: 8
+
+llm:
+  provider: openai_compatible
+  base_url_env: MATERIALAI_LLM_BASE_URL
+  model_env: MATERIALAI_LLM_MODEL
+  api_key_env: MATERIALAI_LLM_API_KEY
+  require_user_confirmation: true

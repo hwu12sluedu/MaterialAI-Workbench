@@ -1,0 +1,10 @@
+numpy
+matplotlib
+scipy
+scikit-learn
+streamlit
+pandas
+Pillow
+plotly>=6.0
+pytest
+ipympl

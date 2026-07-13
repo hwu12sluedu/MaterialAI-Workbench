@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+site/
+
+# IDE
+.vscode/
+.idea/
+**/.ipynb_checkpoints/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+.env.*
+!.env.example
+workspace/
+_learning_runs/
+
+# Generated notebook and documentation output
+*_executed.ipynb
+docs/.buildinfo*
+*.bak
+
+# Optional upstream research datasets are intentionally not shipped in v0.1.
+# See examples/OPTIONAL_DATASETS.md for the official source.
+examples/Texture/Data_CPFFT/*/Data_Base.json
+examples/Train_CPFEM/Data_Random_Texture*.json
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# MaterialAI Workbench generated output
+material_ai_workbench/runs/
+material_ai_workbench/batches/
+material_ai_workbench/cases/
+material_ai_workbench/composite_runs/
+material_ai_workbench/composite_batches/
+material_ai_workbench/datasets/
+material_ai_workbench/surrogates/
+material_ai_workbench/composite_surrogates/
+material_ai_workbench/closed_loop_reports/
+material_ai_workbench/imports/
+material_ai_workbench/mcp_sessions/
+material_ai_workbench/logs/
+
+# Abaqus binary outputs
+*.odb
+*.odb_f
+*.cae
+*.jnl
+*.rpy
+*.prt
+*.com
+*.dat
+*.log
+*.sta
+*.msg
+*.sim
+*.fil
+*.res
+*.rpt
+*.pkl
+*.joblib
+*.pt
+*.pth
