@@ -1,41 +1,32 @@
 site_name: MaterialAI Workbench
-site_description: pyLabFEA learning, Abaqus validation, and FE deep-learning workbench documentation.
+site_description: 材料模型、Abaqus 工作流与仿真数据管理中文文档
 docs_dir: docs
 
 nav:
   - 首页: index.md
-  - 产品说明:
+  - 用户指南:
+      - Windows 客户端: DESKTOP_CLIENT_CN.md
+      - 功能边界与验收: CAPABILITY_BOUNDARIES_CN.md
+      - Abaqus MCP: ABAQUS_MCP_WORKBENCH_CN.md
+      - 案例库: CASE_LIBRARY_USER_GUIDE_CN.md
+      - 自然语言服务（可选）: NATURAL_LANGUAGE_SERVICE_CN.md
+  - 材料与仿真:
       - 产品与复合材料闭环: PRODUCT_COMPOSITE_ML_WORKBENCH_CN.md
       - 技术架构: TECHNICAL_ARCHITECTURE_CN.md
       - 最小闭环案例: MINIMUM_CLOSED_LOOP_CASE_CN.md
-      - 产品路线与学习指南: PRODUCT_ROADMAP_AND_LEARNING_GUIDE_CN.md
-      - 案例库产品愿景: PRODUCT_VISION_CASE_LIBRARY_CN.md
       - pyLabFEA 学习总览: PYLABFEA_NOTEBOOK_STUDY_GUIDE_CN.md
-  - Abaqus 与数据:
-      - Abaqus MCP 工作台: ABAQUS_MCP_WORKBENCH_CN.md
-      - 案例库使用指南: CASE_LIBRARY_USER_GUIDE_CN.md
-  - 项目状态:
-      - v0.1.1 补丁说明: 00_project_status/RELEASE_V0.1.1_CN.md
-      - v0.1.0 发布状态: 00_project_status/RELEASE_V0.1.0_CN.md
-      - 工作区整洁度报告: 00_project_status/WORKSPACE_CLEANLINESS_REPORT_CN.md
-      - 里程碑复盘: 00_project_status/MILESTONE_REVIEW_CN.md
-      - 生产级任务池: 00_project_status/NEXT_PRODUCTION_TASKS_CN.md
-      - 复合材料研究地图: 00_project_status/COMPOSITE_RESEARCH_MAP_CN.md
-      - 自动审计报告: 00_project_status/WORKSPACE_AUDIT_AUTOGEN_CN.md
   - 教学文档:
       - 教学入口: learning/README_CN.md
-      - pyLabFEA 到有限元深度学习: learning/PYLABFEA_TO_FE_DEEP_LEARNING_TUTORIAL_CN.md
-      - pyLabFEA Notebook 与源码精读: learning/PYLABFEA_NOTEBOOK_SOURCE_WALKTHROUGH_CN.md
+      - Notebook 与源码精读: learning/PYLABFEA_NOTEBOOK_SOURCE_WALKTHROUGH_CN.md
+      - 有限元深度学习路线: learning/PYLABFEA_TO_FE_DEEP_LEARNING_TUTORIAL_CN.md
       - Barlat Yld2000 到 Yld2004: learning/BARLAT_YLD2000_TO_YLD2004_CN.md
   - API 文档:
       - API 入口: api/README_CN.md
-      - MaterialAI API 使用: api/MATERIALAI_API_USAGE_CN.md
-      - pyLabFEA 与 MaterialAI 接口: api/PYLABFEA_MATERIALAI_BRIDGE_CN.md
-      - 自动 API 清单: api/API_INVENTORY_AUTOGEN_CN.md
-  - 发布:
-      - 发布重组方案: release/RELEASE_REORG_PLAN_CN.md
-      - GitHub 发布清单: release/GITHUB_RELEASE_CHECKLIST_CN.md
-      - GitHub 产品发布指南: release/GITHUB_PRODUCT_RELEASE_GUIDE_CN.md
+      - Workbench API: api/MATERIALAI_API_USAGE_CN.md
+      - pyLabFEA 与产品层: api/PYLABFEA_MATERIALAI_BRIDGE_CN.md
+      - API 清单: api/API_INVENTORY_CN.md
+  - 开发:
+      - 源码与 Windows 打包: DEVELOPMENT_CN.md
 
 theme:
   name: material

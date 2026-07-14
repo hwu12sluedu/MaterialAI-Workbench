@@ -121,7 +121,7 @@ Streamlit App
 
 负责本地可视化 App：
 
-- `AI 任务`
+- `仿真任务`
 - `材料训练`
 - `数据导入`
 - `Abaqus MCP`

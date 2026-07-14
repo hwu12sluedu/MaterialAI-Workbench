@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_OUTPUT = ROOT / "docs" / "00_project_status" / "WORKSPACE_AUDIT_AUTOGEN_CN.md"
+DEFAULT_OUTPUT = ROOT / "dist" / "release_audit.md"
 TEMP_PARTS = {".pytest_cache", ".ipynb_checkpoints", "__pycache__", "build", "dist"}
 GENERATED_WORKBENCH_DIRS = {
     "runs", "batches", "cases", "datasets", "surrogates", "closed_loop_reports",
@@ -213,7 +213,7 @@ def latest_product_smoke() -> dict:
 
 def render_product_smoke(manifest: dict) -> list[str]:
     if not manifest:
-        return ["- 未发现 product smoke；发布前必须运行 `materialai-product-closed-loop`。"]
+        return ["- 未发现产品闭环运行记录；涉及复合材料发布时应运行 `materialai-product-closed-loop`。"]
     acceptance = manifest.get("acceptance", {})
     capability = manifest.get("capability_status", {})
     return [

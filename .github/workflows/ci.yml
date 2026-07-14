@@ -48,3 +48,17 @@ jobs:
           docker logs material-ai-workbench-ci
           docker stop material-ai-workbench-ci || true
           exit 1
+
+  desktop-backend-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install app dependencies
+        run: |
+          python -m pip install -U pip
+          python -m pip install -e ".[app]"
+      - name: Start desktop backend and check health
+        run: python -m material_ai_workbench.desktop_launcher --smoke-test --startup-timeout 120

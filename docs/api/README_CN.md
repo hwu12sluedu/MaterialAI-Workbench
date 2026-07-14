@@ -14,7 +14,7 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 输出：
 
 ```text
-docs/api/API_INVENTORY_AUTOGEN_CN.md
+docs/api/API_INVENTORY_CN.md
 ```
 
 每次新增函数、类或模块后都应该重新运行。
