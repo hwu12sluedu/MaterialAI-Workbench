@@ -15,7 +15,6 @@ COPY src ./src
 COPY material_ai_workbench ./material_ai_workbench
 COPY examples ./examples
 COPY docs ./docs
-COPY configs ./configs
 COPY schemas ./schemas
 COPY .streamlit ./.streamlit
 COPY MANIFEST.in ./
