@@ -242,7 +242,7 @@ def test_llm_connection(
         return LlmConnectionTest(ok=False, message=str(exc), config=config.to_public_dict())
     return LlmConnectionTest(
         ok=True,
-        message="LLM 已返回可解析的 MaterialAI 任务 JSON。",
+        message="语言模型已返回可解析的仿真任务 JSON。",
         config=config.to_public_dict(),
         task_payload=plan.task_payload,
         raw_text=plan.raw_text,

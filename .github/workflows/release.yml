@@ -10,20 +10,63 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  python-dist:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-      - name: Build and validate distributions
+      - name: Build and validate Python distributions
         run: |
           python -m pip install --upgrade build twine
           python -m build
           python -m twine check dist/*
-      - name: Attach distributions to GitHub release
+      - name: Upload Python distributions
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-distributions
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+          if-no-files-found: error
+
+  windows-portable:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install desktop build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[app,desktop,packaging]"
+      - name: Build and smoke-test portable client
+        shell: powershell
+        run: ./packaging/windows/build_portable.ps1
+      - name: Upload Windows portable client
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-portable
+          path: |
+            dist/MaterialAI-Workbench-Windows-x64-*.zip
+            dist/MaterialAI-Workbench-Windows-x64-*.zip.sha256
+          if-no-files-found: error
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [python-dist, windows-portable]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@v8
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: Publish GitHub release
         uses: softprops/action-gh-release@v3
         with:
-          files: dist/*
+          files: release-assets/*
           generate_release_notes: true

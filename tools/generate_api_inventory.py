@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / "docs" / "api" / "API_INVENTORY_AUTOGEN_CN.md"
+OUTPUT = ROOT / "docs" / "api" / "API_INVENTORY_CN.md"
 
 
 @dataclass
@@ -54,7 +54,9 @@ def source_files() -> list[Path]:
 
 
 def parse_module(path: Path) -> ModuleInfo:
-    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    # utf-8-sig also accepts normal UTF-8 and strips a BOM left by some
+    # Windows editors before handing the source string to ast.parse().
+    tree = ast.parse(path.read_text(encoding="utf-8-sig"), filename=str(path))
     module_name = module_name_for(path)
     functions: list[FunctionInfo] = []
     classes: list[ClassInfo] = []

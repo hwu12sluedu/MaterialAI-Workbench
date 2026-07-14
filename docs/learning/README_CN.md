@@ -127,5 +127,5 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 输出：
 
 ```text
-docs/api/API_INVENTORY_AUTOGEN_CN.md
+docs/api/API_INVENTORY_CN.md
 ```

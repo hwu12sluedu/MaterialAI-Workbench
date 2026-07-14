@@ -39,6 +39,15 @@ Runtime / build dependencies
   License: Apache License 2.0
   URL: https://streamlit.io
 
+- pywebview
+  License: BSD 3-Clause License
+  URL: https://github.com/r0x0r/pywebview
+
+- PyInstaller bootloader (Windows portable build)
+  License: GPL-2.0-or-later with a special exception permitting distribution
+  of bundled applications
+  URL: https://pyinstaller.org
+
 Test / dev (not distributed with MaterialAI Workbench wheels)
 -----------------------------------------------
 - pytest
@@ -60,6 +69,7 @@ Test / dev (not distributed with MaterialAI Workbench wheels)
 
 Notes
 -----
-These libraries are **not bundled into MaterialAI Workbench**. They are installed
-separately via PyPI or conda(-forge) and include their own license information.
-This file is provided for the convenience of users.
+Python source installations resolve these libraries through PyPI or conda. The
+Windows portable client bundles the runtime libraries required by the app; their
+license files and notices remain governed by the respective upstream projects.
+This summary is provided for convenience and does not replace upstream terms.

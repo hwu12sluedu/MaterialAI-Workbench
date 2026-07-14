@@ -1,9 +1,8 @@
 """Direct client for the Abaqus MCP socket bridge.
 
-The Codex MCP tool server and the Streamlit app both talk to the same Abaqus
-GUI-side bridge.  This module intentionally speaks the small JSON-over-TCP
-protocol directly so the app can show connection status and run guarded
-inspection actions without depending on Codex-specific tool plumbing.
+The desktop app and other MCP clients can talk to the same Abaqus GUI-side
+bridge. This module implements the small JSON-over-TCP protocol so the app can
+show connection status and run guarded inspection and job-management actions.
 """
 
 from __future__ import annotations

@@ -35,7 +35,7 @@ conda run -n pylabfea python -m pytest tests -q
 2. 把每个输入参数写成中文含义。
 3. 把每张图解释成工程结论。
 4. 找到它调用的 `pylabfea` 函数或类。
-5. 在 `docs/api/API_INVENTORY_AUTOGEN_CN.md` 中查对应 API。
+5. 在 `docs/api/API_INVENTORY_CN.md` 中查对应 API。
 6. 回答“这个 notebook 的思路如何产品化到 App 中”。
 
 ## 3. 源码模块导读

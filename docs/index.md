@@ -1,47 +1,45 @@
-# MaterialAI Workbench 中文文档中心
+# MaterialAI Workbench 中文文档
 
-这是 MaterialAI Workbench 的中文文档入口。项目由两层组成：
+MaterialAI Workbench 是面向材料与仿真工程师的本地工作台。它由两层组成：
 
-1. `pyLabFEA`：轻量有限元、弹塑性材料、等效应力、机器学习屈服函数、均匀化与复合材料教学代码库。
-2. `material_ai_workbench`：在 pyLabFEA 之上新增的工程化工作台，用于材料本构训练、Abaqus UMAT 验证、案例库、ODB/CSV 后处理、批量仿真、代理模型训练和闭环报告。
+1. `pyLabFEA`：材料模型、轻量有限元、等效应力、机器学习屈服函数与均匀化教学内核。
+2. `material_ai_workbench`：Windows 客户端、Abaqus 工作流、案例库、数据导入、后处理和代理模型。
 
 ![MaterialAI Workbench 客户端](assets/materialai-workbench-app.png)
 
-## 最终产品目标
+## 按使用目的进入
 
-我们要做的不是单一脚本，而是一个面向机械/仿真工程师的本地 CAE + AI 工作台：
+### 直接使用客户端
 
-```text
-日常 Abaqus 案例
--> 案例库归档
--> INP/ODB/CSV/云图/日志/报告特征提取
--> 材料本构训练与有限元代理模型训练
--> Abaqus 真实模型验证
--> 自然语言生成可审查任务 JSON
--> 用户确认后批量运行 Abaqus
--> 自动后处理、报告、数据回写和模型迭代
-```
+- [Windows 客户端使用与排错](DESKTOP_CLIENT_CN.md)
+- [功能边界与验收说明](CAPABILITY_BOUNDARIES_CN.md)
+- [Abaqus MCP 使用指南](ABAQUS_MCP_WORKBENCH_CN.md)
+- [案例库使用指南](CASE_LIBRARY_USER_GUIDE_CN.md)
 
-## 今天形成的文档系统
+### 理解材料与仿真流程
 
-- `docs/00_project_status/`：项目体检、里程碑、任务池、复合材料研究地图。
-- `docs/learning/`：从 pyLabFEA 源码/notebook 学到有限元深度学习模型的闭环教程。
-- `docs/api/`：可执行 API 使用文档和自动生成的公开函数/类清单。
-- `docs/release/`：GitHub 发布前的目录重组、清理、打包和验收流程。
-- `tools/`：文档维护工具，当前包括 API 清单生成和发布审计。
+- [产品与复合材料闭环](PRODUCT_COMPOSITE_ML_WORKBENCH_CN.md)
+- [技术架构](TECHNICAL_ARCHITECTURE_CN.md)
+- [最小闭环案例](MINIMUM_CLOSED_LOOP_CASE_CN.md)
+- [pyLabFEA 学习总览](PYLABFEA_NOTEBOOK_STUDY_GUIDE_CN.md)
 
-## 常用命令
+### 学源码和 API
+
+- [教学入口](learning/README_CN.md)
+- [pyLabFEA Notebook 与源码精读](learning/PYLABFEA_NOTEBOOK_SOURCE_WALKTHROUGH_CN.md)
+- [从 pyLabFEA 到有限元深度学习](learning/PYLABFEA_TO_FE_DEEP_LEARNING_TUTORIAL_CN.md)
+- [API 入口](api/README_CN.md)
+- [源码开发与 Windows 打包](DEVELOPMENT_CN.md)
+
+## 文档原则
+
+- 区分已实现代码、需要本机 Abaqus 验证的功能和研究路线。
+- 不把生成脚本写成真实求解结果。
+- 不把小样本模型指标写成工业泛化精度。
+- 教学文档保留 pyLabFEA notebook 和底层代码解释，用户文档只说明可直接操作的流程。
+
+本地预览：
 
 ```powershell
-conda run -n pylabfea python tools/generate_api_inventory.py
-conda run -n pylabfea python tools/release_audit.py
-conda run -n pylabfea python -m pytest tests material_ai_workbench/tests -q -m "not slow"
-conda run -n pylabfea streamlit run material_ai_workbench/streamlit_app.py --server.port 8501
-```
-
-如果安装了 MkDocs Material，可以本地预览文档：
-
-```powershell
-conda run -n pylabfea python -m pip install mkdocs mkdocs-material
 conda run -n pylabfea mkdocs serve
 ```

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.0 - 2026-07-14
+
+Windows desktop release and public-repository cleanup.
+
+### Added
+
+- Native Windows launcher backed by pywebview and a private Streamlit process.
+- Automatic loopback-port selection, startup health check, single-instance guard and clean backend shutdown.
+- Per-user workspace, configuration and rotating logs under `%LOCALAPPDATA%\MaterialAIWorkbench`.
+- PyInstaller one-folder build, portable ZIP, SHA256 checksum and frozen-application smoke test.
+- Windows client, troubleshooting, capability-boundary and source-build documentation.
+
+### Changed
+
+- Reworked the README around direct Windows download, engineering workflows and explicit limitations.
+- Moved optional language-model configuration out of the primary workflow and renamed the UI entry to `仿真任务`.
+- Removed internal agent task lists, dated audits, status reports, duplicate documentation and unused YAML configuration examples from the public package.
+- GitHub Release automation now publishes Python distributions and the Windows x64 portable client together.
+
 ## 0.1.1 - 2026-07-13
 
 Patch release for clean-install and CI compatibility.

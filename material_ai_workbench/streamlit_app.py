@@ -10,6 +10,7 @@ from typing import Any
 
 import numpy as np
 import streamlit as st
+from PIL import Image
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -160,17 +161,26 @@ SURROGATE_TARGET_OPTIONS = [
 ]
 
 
+def _load_page_icon() -> Image.Image | None:
+    icon_path = Path(__file__).resolve().parent / "resources" / "app_icon.png"
+    try:
+        with Image.open(icon_path) as icon:
+            return icon.copy()
+    except OSError:
+        return None
+
+
 def main() -> None:
     st.set_page_config(
         page_title="MaterialAI Workbench",
-        page_icon=None,
+        page_icon=_load_page_icon(),
         layout="wide",
         initial_sidebar_state="expanded",
     )
     _inject_style()
 
     st.title("MaterialAI Workbench")
-    st.caption("材料本构训练 · Abaqus UMAT 单元验算 · 结果报告")
+    st.caption("材料建模 · Abaqus 验证 · 仿真数据管理")
 
     with st.sidebar:
         st.subheader("运行目录")
@@ -181,7 +191,7 @@ def main() -> None:
         _llm_sidebar_status()
 
     page_labels = {
-        "ai": "AI 任务",
+        "ai": "仿真任务",
         "train": "材料训练",
         "import": "数据导入",
         "case": "案例库",
@@ -236,15 +246,15 @@ def _run_material_training_with_feedback(config: WorkbenchConfig, message: str):
 def _llm_sidebar_status() -> None:
     cfg = llm_config_from_env()
     configured = bool(cfg.base_url.strip() and cfg.model.strip() and (not cfg.require_api_key or cfg.api_key))
-    st.subheader("LLM")
-    if st.session_state.get("llm_last_connection_ok"):
-        st.success("连接已验证")
-    elif configured:
-        st.info("已配置，未测试")
-    else:
-        st.warning("未配置")
-    if cfg.model:
-        st.caption(f"`{cfg.model}`")
+    with st.expander("自然语言服务", expanded=False):
+        if st.session_state.get("llm_last_connection_ok"):
+            st.success("连接已验证")
+        elif configured:
+            st.info("已配置，未测试")
+        else:
+            st.caption("未配置；规则解析仍可使用")
+        if cfg.model:
+            st.caption(f"`{cfg.model}`")
 
 
 def _ensure_llm_ui_defaults() -> None:
@@ -291,8 +301,8 @@ def _llm_config_wizard() -> tuple[LlmChatConfig, str, bool, bool]:
         type="password",
         key="llm_api_key_value",
     )
-    llm_timeout = st.number_input("LLM 超时(秒)", min_value=10, max_value=300, step=10, key="llm_timeout")
-    allow_llm = st.checkbox("允许本次调用外部 LLM API", value=False, key="allow_llm_call")
+    llm_timeout = st.number_input("服务超时(秒)", min_value=10, max_value=300, step=10, key="llm_timeout")
+    allow_llm = st.checkbox("允许本次调用外部模型服务", value=False, key="allow_llm_call")
 
     cfg = LlmChatConfig(
         provider_name=provider_key,
@@ -303,8 +313,8 @@ def _llm_config_wizard() -> tuple[LlmChatConfig, str, bool, bool]:
         require_api_key=bool(llm_require_key),
     )
     b1, b2 = st.columns(2)
-    save_clicked = b1.button("保存 LLM 配置", use_container_width=True, key="llm_save_config")
-    llm_clicked = b2.button("LLM 增强解析", use_container_width=True, key="ai_llm_parse")
+    save_clicked = b1.button("保存服务配置", use_container_width=True, key="llm_save_config")
+    llm_clicked = b2.button("使用模型解析", use_container_width=True, key="ai_llm_parse")
 
     if save_clicked:
         try:
@@ -314,7 +324,7 @@ def _llm_config_wizard() -> tuple[LlmChatConfig, str, bool, bool]:
             st.error(f"保存失败：{exc}")
 
     if test_clicked:
-        with st.spinner("正在测试 LLM 连接并验证任务 JSON..."):
+        with st.spinner("正在测试连接并验证任务 JSON..."):
             result = test_llm_connection(cfg, api_key_value=llm_api_key_value or None)
         st.session_state["llm_last_connection_ok"] = bool(result.ok)
         if result.ok:
@@ -328,7 +338,7 @@ def _llm_config_wizard() -> tuple[LlmChatConfig, str, bool, bool]:
 
 
 def _ai_task_panel() -> None:
-    st.subheader("AI 任务")
+    st.subheader("仿真任务")
     left, right = st.columns([0.46, 0.54], gap="large")
 
     default_prompt = (
@@ -341,7 +351,7 @@ def _ai_task_panel() -> None:
         st.markdown("**自然语言输入**")
         prompt = st.text_area("描述你的仿真任务", value=default_prompt, height=180, key="nl_task_prompt")
         parse_clicked = st.button("解析任务", type="primary", use_container_width=True, key="ai_parse_task")
-        with st.expander("LLM API（可选）", expanded=False):
+        with st.expander("外部语言模型（可选）", expanded=False):
             llm_config, llm_api_key_value, allow_llm, llm_clicked = _llm_config_wizard()
         allow_abaqus = st.checkbox("允许本次任务调用 Abaqus", value=False)
         execute_clicked = st.button("执行任务", use_container_width=True, key="ai_execute_training")
@@ -355,7 +365,7 @@ def _ai_task_panel() -> None:
 
         if llm_clicked:
             if not allow_llm:
-                st.warning("请先勾选“允许本次调用外部 LLM API”。")
+                st.warning("请先勾选“允许本次调用外部模型服务”。")
             else:
                 try:
                     apply_llm_config(llm_config, api_key_value=llm_api_key_value or None)
@@ -364,12 +374,12 @@ def _ai_task_panel() -> None:
                         llm_config,
                     )
                 except (LlmConfigError, LlmResponseError, Exception) as exc:
-                    st.error(f"LLM 解析失败：{exc}")
+                    st.error(f"模型解析失败：{exc}")
                 else:
                     st.session_state["nl_task_payload"] = llm_plan.task_payload
                     st.session_state["nl_task_payload_source"] = prompt
                     st.session_state["nl_llm_raw_text"] = llm_plan.raw_text
-                    st.success("LLM 任务 JSON 已生成")
+                    st.success("模型任务 JSON 已生成")
 
         task_source = "规则解析"
         task_payload = st.session_state.get("nl_task_payload")
@@ -378,12 +388,12 @@ def _ai_task_panel() -> None:
             and st.session_state.get("nl_task_payload_source") == prompt
             and str(task_payload.get("task_type", "")).strip() == "composite_plate_hole"
         ):
-            task_source = "LLM 解析"
+            task_source = "语言模型解析"
             st.caption(f"当前解析来源：{task_source}")
             st.json(task_payload)
             raw_text = st.session_state.get("nl_llm_raw_text")
             if raw_text:
-                with st.expander("LLM 原始返回", expanded=False):
+                with st.expander("模型原始返回", expanded=False):
                     st.code(str(raw_text), language="json")
             for warning in task_payload.get("warnings", []) if isinstance(task_payload.get("warnings"), list) else []:
                 st.warning(str(warning))
@@ -405,14 +415,14 @@ def _ai_task_panel() -> None:
             abaqus_payload = task_payload.get("abaqus") if isinstance(task_payload.get("abaqus"), dict) else {}
             wants_abaqus = bool(abaqus_payload.get("run_check") or abaqus_payload.get("submit_job"))
             if wants_abaqus and not allow_abaqus:
-                st.info("LLM 已生成 Abaqus 建模/求解任务。勾选“允许本次任务调用 Abaqus”后才会真正启动 Abaqus；否则只生成模型脚本和报告。")
+                st.info("语言模型已生成 Abaqus 建模/求解任务。勾选“允许本次任务调用 Abaqus”后才会真正启动 Abaqus；否则只生成模型脚本和报告。")
             if execute_clicked:
                 _execute_composite_ai_task(task_payload, allow_abaqus=bool(allow_abaqus))
             return
 
         if task_payload and st.session_state.get("nl_task_payload_source") == prompt:
             task = task_from_dict(task_payload, source_text=prompt)
-            task_source = "LLM 解析"
+            task_source = "语言模型解析"
         else:
             task = parse_natural_language_task(prompt)
 
@@ -422,8 +432,8 @@ def _ai_task_panel() -> None:
         st.json(task.to_dict())
 
         raw_text = st.session_state.get("nl_llm_raw_text")
-        if task_source == "LLM 解析" and raw_text:
-            with st.expander("LLM 原始返回", expanded=False):
+        if task_source == "语言模型解析" and raw_text:
+            with st.expander("模型原始返回", expanded=False):
                 st.code(str(raw_text), language="json")
 
         if task.warnings:
@@ -596,22 +606,22 @@ def _training_panel() -> None:
     with left:
         st.subheader("材料与训练参数")
         _material_library_controls()
-        with st.expander("AI 参数建议", expanded=False):
+        with st.expander("材料参数建议（可选）", expanded=False):
             recommendation_text = st.text_area(
                 "材料描述",
                 value="6061 铝板，轧制方向存在各向异性，用于带孔板拉伸验证。",
                 height=90,
                 key="train_recommendation_text",
             )
-            allow_recommendation = st.checkbox("允许调用外部 LLM API 生成建议", value=False, key="train_allow_recommendation")
+            allow_recommendation = st.checkbox("允许调用外部模型服务生成建议", value=False, key="train_allow_recommendation")
             recommend_clicked = st.button("生成并填入建议参数", use_container_width=True, key="train_recommend_parameters")
             if recommend_clicked:
                 if not allow_recommendation:
-                    st.info("勾选允许调用外部 LLM API 后再生成建议；没有 API 时可继续手动填写参数。")
+                    st.info("勾选允许调用外部模型服务后再生成建议；未配置服务时可继续手动填写参数。")
                 else:
                     recommendation = recommend_parameters(recommendation_text)
                     if recommendation is None:
-                        st.warning("未获得参数建议。请检查 LLM API 环境变量，或先手动设置材料参数。")
+                        st.warning("未获得参数建议。请检查模型服务配置，或先手动设置材料参数。")
                     else:
                         params = recommendation.parameters
                         st.session_state["train_material_type"] = recommendation.material_type if recommendation.material_type in {"j2", "hill", "barlat", "neo_hookean", "mooney_rivlin"} else "j2"
@@ -1415,7 +1425,7 @@ def _material_library_controls() -> None:
 
 def _abaqus_mcp_panel(selected_run: Path | None) -> None:
     st.subheader("Abaqus MCP 工作台")
-    st.caption("用于把后续 AI 客户端和当前打开的 Abaqus/CAE 会话连起来。")
+    st.caption("连接当前打开的 Abaqus/CAE 会话，用于查询模型、管理 Job 和读取结果。")
     left, right = st.columns([0.38, 0.62], gap="large")
 
     with left:
