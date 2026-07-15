@@ -97,6 +97,19 @@ if ($exeVersion -ne $version) {
     throw "Executable version mismatch: expected $version, found $exeVersion."
 }
 
+# PyInstaller hooks for Arrow and scikit-learn collect upstream test fixtures
+# that are not used by the desktop client. Keep the public ZIP free of them.
+$developmentArtifactDirs = @(
+    (Join-Path $AppDir "_internal\pyarrow\tests"),
+    (Join-Path $AppDir "_internal\sklearn\datasets\tests")
+)
+foreach ($developmentArtifactDir in $developmentArtifactDirs) {
+    $safeArtifactDir = Assert-ChildPath -Path $developmentArtifactDir -Parent $AppDir
+    if (Test-Path -LiteralPath $safeArtifactDir) {
+        Remove-Item -LiteralPath $safeArtifactDir -Recurse -Force
+    }
+}
+
 Copy-Item -LiteralPath "packaging\windows\README-START.txt" -Destination $AppDir -Force
 Copy-Item -LiteralPath "LICENSE" -Destination $AppDir -Force
 Copy-Item -LiteralPath "NOTICE.md" -Destination $AppDir -Force
