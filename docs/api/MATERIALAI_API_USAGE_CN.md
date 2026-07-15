@@ -245,3 +245,66 @@ closed_loop_reports/<time>/closed_loop_validation_report.md
 - 给 GitHub 展示。
 - 给简历/面试提供证据。
 - 给后续模型迭代提供验收基线。
+
+## 10. Abaqus 环境诊断
+
+入口：
+
+- Python：`material_ai_workbench.abaqus_diagnostics`
+- CLI：`materialai-diagnostics`
+
+```python
+from material_ai_workbench.abaqus_diagnostics import (
+    AbaqusDiagnosticConfig,
+    run_abaqus_diagnostics,
+)
+
+report = run_abaqus_diagnostics(
+    AbaqusDiagnosticConfig(probe_commands=True)
+)
+print(report.overall_status, report.batch_ready, report.mcp_ready)
+```
+
+输出遵循 `schemas/diagnostics.schema.json`。`batch_ready` 与 `mcp_ready` 独立判断，MCP 未连接不应阻止可用的 Abaqus 批处理流程。
+
+## 11. 三维带孔板验收
+
+入口：
+
+- Python：`material_ai_workbench.plate_hole_acceptance`
+- CLI：`materialai-plate-hole`
+
+```python
+from material_ai_workbench.plate_hole_acceptance import (
+    PlateHoleAcceptanceConfig,
+    run_plate_hole_acceptance,
+)
+
+prepared = run_plate_hole_acceptance(
+    PlateHoleAcceptanceConfig(name="review_case"),
+    execute=False,
+)
+
+solved = run_plate_hole_acceptance(
+    PlateHoleAcceptanceConfig(
+        name="verified_case",
+        submit_job=True,
+        archive_case=True,
+    ),
+    execute=True,
+)
+```
+
+恢复已有运行：
+
+```python
+from material_ai_workbench.plate_hole_acceptance import resume_plate_hole_acceptance
+
+result = resume_plate_hole_acceptance(
+    "<acceptance_run_dir>",
+    execute=True,
+    submit_job=True,
+)
+```
+
+状态和证据遵循 `schemas/acceptance_manifest.schema.json`。只有真实 ODB 和求解证据存在时，`solve` 阶段才会通过。

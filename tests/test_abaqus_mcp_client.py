@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 import socketserver
 import threading
+from pathlib import Path
 
 from material_ai_workbench.abaqus_mcp_client import (
     AbaqusMcpConfig,
+    create_session_snapshot,
     execute_kernel_code,
     ping_bridge,
     request_bridge,
@@ -28,7 +30,12 @@ class _FakeBridgeHandler(socketserver.BaseRequestHandler):
                 "bridge": {"processed": 3},
             }
         elif method == "execute":
-            result = {"ok": True, "return_value": {"value": 42}, "stdout": "", "stderr": ""}
+            result = {
+                "ok": True,
+                "return_value": {"value": 42},
+                "stdout": "",
+                "stderr": "",
+            }
         else:
             self.request.sendall(
                 json.dumps(
@@ -42,7 +49,12 @@ class _FakeBridgeHandler(socketserver.BaseRequestHandler):
             )
             return
 
-        self.request.sendall(json.dumps({"id": payload["id"], "ok": True, "result": result}).encode("utf-8") + b"\n")
+        self.request.sendall(
+            json.dumps({"id": payload["id"], "ok": True, "result": result}).encode(
+                "utf-8"
+            )
+            + b"\n"
+        )
 
 
 class _ReusableTcpServer(socketserver.ThreadingTCPServer):
@@ -92,3 +104,21 @@ def test_execute_kernel_code_returns_execution_payload() -> None:
 
     assert result["ok"] is True
     assert result["return_value"]["value"] == 42
+
+
+def test_session_snapshot_uses_explicit_writable_root(tmp_path: Path) -> None:
+    server, config = _start_fake_bridge()
+    try:
+        snapshot = create_session_snapshot(
+            config=config,
+            capture_image=False,
+            output_root=tmp_path,
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert snapshot.snapshot_dir.parent == tmp_path.resolve()
+    assert snapshot.summary_path.is_file()
+    assert snapshot.report_path.is_file()
+    assert "桌面客户端" in snapshot.report_path.read_text(encoding="utf-8")

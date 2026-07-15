@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import base64
 import json
-import os
 import socket
 import uuid
 from dataclasses import asdict, dataclass
@@ -17,11 +16,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from material_ai_workbench.config import (
+    ABAQUS_MCP_HOST,
+    ABAQUS_MCP_PORT,
+    ABAQUS_MCP_TIMEOUT,
+    MCP_SESSIONS_ROOT,
+)
 
-DEFAULT_HOST = os.environ.get("ABAQUS_MCP_HOST", "127.0.0.1")
-DEFAULT_PORT = int(os.environ.get("ABAQUS_MCP_PORT", "48152"))
-DEFAULT_TIMEOUT = float(os.environ.get("ABAQUS_MCP_TIMEOUT", "10"))
-MCP_SESSIONS_ROOT = Path(__file__).resolve().parent / "mcp_sessions"
+DEFAULT_HOST = ABAQUS_MCP_HOST
+DEFAULT_PORT = ABAQUS_MCP_PORT
+DEFAULT_TIMEOUT = ABAQUS_MCP_TIMEOUT
 
 
 class AbaqusMcpError(RuntimeError):
@@ -114,7 +118,7 @@ def ping_bridge(config: AbaqusMcpConfig | None = None) -> AbaqusMcpStatus:
             connected=False,
             endpoint=endpoint,
             checked_at=checked_at,
-            message="Abaqus MCP bridge is not connected.",
+            message="Abaqus MCP Bridge 未连接。",
             error=str(exc),
         )
     except AbaqusMcpError as exc:
@@ -122,7 +126,7 @@ def ping_bridge(config: AbaqusMcpConfig | None = None) -> AbaqusMcpStatus:
             connected=False,
             endpoint=endpoint,
             checked_at=checked_at,
-            message="Abaqus MCP bridge responded, but Abaqus kernel execution failed.",
+            message="Abaqus MCP Bridge 已响应，但 Abaqus 内核执行失败。",
             error=str(exc),
         )
     except Exception as exc:
@@ -130,7 +134,7 @@ def ping_bridge(config: AbaqusMcpConfig | None = None) -> AbaqusMcpStatus:
             connected=False,
             endpoint=endpoint,
             checked_at=checked_at,
-            message="Abaqus MCP status check failed.",
+            message="Abaqus MCP 状态检查失败。",
             error=str(exc),
         )
 
@@ -141,12 +145,14 @@ def ping_bridge(config: AbaqusMcpConfig | None = None) -> AbaqusMcpStatus:
         connected=True,
         endpoint=endpoint,
         checked_at=checked_at,
-        message=f"Connected to Abaqus {version}. Models: {models}. Viewports: {viewports}.",
+        message=f"已连接 Abaqus {version}；模型：{models}；视口：{viewports}。",
         telemetry=telemetry,
     )
 
 
-def execute_kernel_code(code: str, config: AbaqusMcpConfig | None = None) -> dict[str, Any]:
+def execute_kernel_code(
+    code: str, config: AbaqusMcpConfig | None = None
+) -> dict[str, Any]:
     """Execute a small Python chunk inside the live Abaqus/CAE kernel."""
 
     if not code.strip():
@@ -167,7 +173,9 @@ def stop_bridge(config: AbaqusMcpConfig | None = None) -> dict[str, Any]:
     return request_bridge("stop", config=config)
 
 
-def set_workdir(path: Path | str, config: AbaqusMcpConfig | None = None) -> dict[str, Any]:
+def set_workdir(
+    path: Path | str, config: AbaqusMcpConfig | None = None
+) -> dict[str, Any]:
     target = str(Path(path).resolve())
     code = r"""
 import os
@@ -263,7 +271,9 @@ result = {"jobs": jobs}
     return _return_value(execute_kernel_code(code, config=config)).get("jobs", [])
 
 
-def monitor_job_status(job_name: str = "", config: AbaqusMcpConfig | None = None) -> dict[str, Any]:
+def monitor_job_status(
+    job_name: str = "", config: AbaqusMcpConfig | None = None
+) -> dict[str, Any]:
     code = r"""
 import os
 import re
@@ -335,7 +345,9 @@ result = {"success": True, "job": job_name, "status": str(getattr(job, "status",
     return _return_value(execute_kernel_code(code, config=config))
 
 
-def inspect_odb(odb_path: Path | str, config: AbaqusMcpConfig | None = None) -> dict[str, Any]:
+def inspect_odb(
+    odb_path: Path | str, config: AbaqusMcpConfig | None = None
+) -> dict[str, Any]:
     path = str(Path(odb_path).resolve())
     code = r"""
 from odbAccess import openOdb
@@ -416,10 +428,15 @@ def extract_odb_field_summary(
     """
 
     path = str(Path(odb_path).resolve())
-    field_names = [str(item).strip().upper() for item in (fields or ("S", "PEEQ", "U", "RF", "CPRESS", "COPEN")) if str(item).strip()]
+    field_names = [
+        str(item).strip().upper()
+        for item in (fields or ("S", "PEEQ", "U", "RF", "CPRESS", "COPEN"))
+        if str(item).strip()
+    ]
     max_values = max(1, int(max_values_per_field))
     max_history = max(0, int(max_history_outputs))
-    code = r"""
+    code = (
+        r"""
 from odbAccess import openOdb
 try:
     from abaqusConstants import MISES, MAGNITUDE
@@ -660,7 +677,11 @@ try:
 finally:
     if odb is not None:
         odb.close()
-""".replace("__ODB_PATH__", json.dumps(path)).replace("__FIELDS__", json.dumps(field_names)).replace("__MAX_VALUES__", str(max_values)).replace("__MAX_HISTORY__", str(max_history))
+""".replace("__ODB_PATH__", json.dumps(path))
+        .replace("__FIELDS__", json.dumps(field_names))
+        .replace("__MAX_VALUES__", str(max_values))
+        .replace("__MAX_HISTORY__", str(max_history))
+    )
     return _return_value(execute_kernel_code(code, config=config))
 
 
@@ -675,7 +696,8 @@ def display_odb_contour(
     """Display an ODB contour in the current Abaqus viewport before capture."""
 
     path = str(Path(odb_path).resolve())
-    code = r"""
+    code = (
+        r"""
 from odbAccess import openOdb
 from abaqus import session
 from abaqusConstants import CONTOURS_ON_DEF, INTEGRATION_POINT, NODAL, ELEMENT_NODAL, WHOLE_ELEMENT, INVARIANT, COMPONENT
@@ -735,7 +757,14 @@ result = {
     "invariant": invariant,
     "output_position": output_position_name,
 }
-""".replace("__ODB_PATH__", json.dumps(path)).replace("__FIELD_LABEL__", json.dumps(field_label.strip() or "S")).replace("__INVARIANT__", json.dumps(invariant.strip())).replace("__OUTPUT_POSITION__", json.dumps(output_position.strip().upper() or "INTEGRATION_POINT"))
+""".replace("__ODB_PATH__", json.dumps(path))
+        .replace("__FIELD_LABEL__", json.dumps(field_label.strip() or "S"))
+        .replace("__INVARIANT__", json.dumps(invariant.strip()))
+        .replace(
+            "__OUTPUT_POSITION__",
+            json.dumps(output_position.strip().upper() or "INTEGRATION_POINT"),
+        )
+    )
     return _return_value(execute_kernel_code(code, config=config))
 
 
@@ -787,7 +816,9 @@ finally:
         os.unlink(tmp_path)
     except Exception:
         pass
-""".replace("__VP_NAME__", json.dumps(viewport_name.strip())).replace("__FORMAT__", json.dumps(fmt_name))
+""".replace("__VP_NAME__", json.dumps(viewport_name.strip())).replace(
+        "__FORMAT__", json.dumps(fmt_name)
+    )
     data = _return_value(execute_kernel_code(code, config=config))
     suffix = "." + str(data.get("format", fmt_name.lower()))
     viewport = _safe_name(str(data.get("viewport") or "viewport"))
@@ -801,12 +832,14 @@ def create_session_snapshot(
     selected_run: Path | None = None,
     config: AbaqusMcpConfig | None = None,
     capture_image: bool = True,
+    output_root: Path | str | None = None,
 ) -> AbaqusMcpSnapshot:
     """Capture status/model/job/viewport information into a local report folder."""
 
     cfg = config or AbaqusMcpConfig()
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    snapshot_dir = MCP_SESSIONS_ROOT / f"{stamp}_abaqus_mcp_snapshot"
+    root = Path(output_root or MCP_SESSIONS_ROOT).expanduser().resolve()
+    snapshot_dir = root / f"{stamp}_abaqus_mcp_snapshot"
     snapshot_dir.mkdir(parents=True, exist_ok=True)
 
     status = ping_bridge(cfg)
@@ -841,7 +874,9 @@ def create_session_snapshot(
         "errors": errors,
     }
     summary_path = snapshot_dir / "mcp_snapshot.json"
-    summary_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
+    summary_path.write_text(
+        json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
 
     report_path = snapshot_dir / "mcp_snapshot_report.md"
     report_path.write_text(_snapshot_report(summary), encoding="utf-8")
@@ -855,11 +890,15 @@ def create_session_snapshot(
 
 
 def _send_json(sock: socket.socket, payload: dict[str, Any]) -> None:
-    data = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    data = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode(
+        "utf-8"
+    )
     sock.sendall(data + b"\n")
 
 
-def _read_json(sock: socket.socket, max_bytes: int = 32 * 1024 * 1024) -> dict[str, Any]:
+def _read_json(
+    sock: socket.socket, max_bytes: int = 32 * 1024 * 1024
+) -> dict[str, Any]:
     chunks: list[bytes] = []
     total = 0
     while True:
@@ -895,16 +934,30 @@ def _format_kernel_error(result: dict[str, Any]) -> str:
 
 
 def _safe_name(value: str) -> str:
-    return "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in value).strip("_") or "viewport"
+    return (
+        "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in value).strip(
+            "_"
+        )
+        or "viewport"
+    )
 
 
 def _snapshot_report(summary: dict[str, Any]) -> str:
     status = summary.get("status", {})
     jobs = summary.get("jobs") or []
     model_info = summary.get("model_info") or {}
-    models = list((model_info.get("models") or {}).keys()) if isinstance(model_info, dict) else []
+    models = (
+        list((model_info.get("models") or {}).keys())
+        if isinstance(model_info, dict)
+        else []
+    )
     errors = summary.get("errors") or []
-    job_lines = "\n".join(f"- `{job.get('name')}`: {job.get('status', 'unknown')}" for job in jobs) or "- 暂无 job"
+    job_lines = (
+        "\n".join(
+            f"- `{job.get('name')}`: {job.get('status', 'unknown')}" for job in jobs
+        )
+        or "- 暂无 job"
+    )
     error_lines = "\n".join(f"- {item}" for item in errors) or "- 无"
     return f"""# Abaqus MCP 会话快照
 
@@ -930,5 +983,5 @@ def _snapshot_report(summary: dict[str, Any]) -> str:
 
 ## 说明
 
-本快照由 MaterialAI Workbench 通过 Abaqus MCP socket bridge 生成，用于记录 AI 客户端与 Abaqus/CAE 的实时连接状态、模型上下文、Job 状态和可视化输出。
+本快照由 MaterialAI Workbench 通过 Abaqus MCP socket bridge 生成，用于记录桌面客户端与 Abaqus/CAE 的实时连接状态、模型上下文、Job 状态和可视化输出。
 """

@@ -19,12 +19,15 @@
 | 能力 | 无 Abaqus | 有 Abaqus 与许可证 |
 |---|---|---|
 | INP/建模脚本生成 | 可用 | 可用 |
+| 三维带孔板验收 | 可生成 prepared 工件 | 可生成 CAE/INP、提交 Job、提取 ODB 并归档 |
 | Job 计划和队列 | 可用 | 可提交并监控 |
 | ODB/CSV 后处理 | 只能读取已有兼容数据 | 可通过 SMAPython/MCP 提取 |
 | CAE 实时查询 | 不可用 | 启动 MCP Socket Bridge 后可用 |
 | 结果报告 | 生成输入与流程证据 | 可加入真实求解结果和云图 |
 
 客户端不会把“脚本已生成”显示成“求解已完成”。状态必须来自 Job/ODB 证据。
+
+三维验收状态固定为 `prepared -> built -> solved -> postprocessed -> validated -> archived`。阶段失败可从同一运行目录恢复；恢复前后的配置、日志和文件路径都写入 `acceptance_manifest.json`。
 
 ## 3. 复合材料微观模型
 
@@ -55,3 +58,4 @@
 3. Windows 便携包在干净构建机完成冻结后健康检查。
 4. Release 同时提供 ZIP、SHA256、wheel 和源码包。
 5. 发布候选不含 `.env`、ODB/CAE、用户案例、明文密钥或内部任务记录。
+6. 带 Abaqus 的发布候选至少完成一个三维带孔板实机闭环，并保存 `.sta`、ODB 特征和验收清单。

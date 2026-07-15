@@ -34,20 +34,37 @@ python -m build
 python -m twine check dist/*
 ```
 
+本机 Abaqus 发布前验收：
+
+```powershell
+materialai-diagnostics --probe-commands
+materialai-plate-hole --name release_candidate --execute --submit-job --archive-case --backend batch
+```
+
+功能黑盒清单见 `docs/testing/FUNCTIONAL_TEST_CHECKLIST_CN.md`；后续独立测试仓库的边界见 `docs/testing/QA_PROJECT_HANDOFF_CN.md`。
+
 `slow` 测试包含耗时更长的上游训练或集成检查，发布前按需要单独运行。
 
 ## 3. 便携客户端构建
 
+建议使用独立打包环境，避免把开发机 Conda 环境中的 MKL、MPI 或其他可选运行库误收进客户端：
+
 ```powershell
-powershell -ExecutionPolicy Bypass -File packaging/windows/build_portable.ps1
+python -m venv workspace/packaging_env
+workspace/packaging_env/Scripts/python.exe -m pip install --upgrade pip
+workspace/packaging_env/Scripts/python.exe -m pip install ".[app,desktop,packaging]"
+powershell -NoProfile -ExecutionPolicy Bypass -File packaging/windows/build_portable.ps1 `
+  -Python workspace/packaging_env/Scripts/python.exe
 ```
 
 构建脚本会：
 
-1. 使用 PyInstaller 生成 one-folder 应用。
-2. 运行冻结后后台健康检查。
-3. 加入启动说明、许可证与第三方声明。
-4. 生成 Windows x64 ZIP 和 SHA256 文件。
+1. 清理同名旧构建，拒绝复用或改名旧 EXE。
+2. 使用选定 Python 的运行库路径执行 PyInstaller。
+3. 核对 EXE 版本资源和 700 MB 未压缩体积上限。
+4. 加入启动说明、许可证与第三方声明。
+5. 从 ZIP 解压后运行带硬超时的冻结客户端健康检查和材料训练自检。
+6. 只有全部通过才保留 Windows x64 ZIP 并生成 SHA256；失败时删除 ZIP。
 
 产物位于 `dist/`。one-folder 体积大于 Python wheel，但启动和排错更稳定，适合包含 NumPy、SciPy、scikit-learn、Matplotlib、Streamlit 的工程软件。
 

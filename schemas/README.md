@@ -1,6 +1,11 @@
-# Task Schema Directory
+# Schema Directory
 
-This directory is reserved for production JSON Schemas that will define auditable tasks before any AI-generated plan can execute.
+Machine-readable contracts shared by the product, documentation and the future black-box QA repository.
+
+Current schemas:
+
+- `diagnostics.schema.json`: Abaqus batch/MCP diagnostic report.
+- `acceptance_manifest.schema.json`: resumable 3D plate-hole acceptance state and evidence.
 
 Planned schemas:
 
