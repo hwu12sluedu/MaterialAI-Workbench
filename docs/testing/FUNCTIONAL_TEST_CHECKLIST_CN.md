@@ -162,6 +162,6 @@
 
 2026-07-15 默认三维带孔板算例已通过 `PH-001`、`PH-003`、`PH-004`、`PH-005`、`PH-006`、`PH-007`、`PH-010` 和 `PH-016`。该记录属于开发机验收证据，独立 QA 项目仍需在干净发布包和独立工作区重复执行。
 
-同日 `0.3.0.dev0` 发布候选还通过：`ABQ-001`、`ABQ-003`、`ABQ-004`、`ABQ-007`、`ABQ-013`、`REL-001`、`REL-002`、`REL-003`、`REL-004`、`REL-005`、`REL-006`、`REL-007` 和 `REL-010`。冻结客户端 ZIP 为 138.5 MB，解压后为 332.8 MB；EXE 版本资源一致，SHA256 复核一致，归档中未发现 workspace、测试目录、缓存、环境文件、ODB 或 CAE。
+同日 `0.3.0` 发布候选在独立 [MaterialAI-Workbench-QA](https://github.com/hwu12sluedu/MaterialAI-Workbench-QA) 中完成七套自动化门禁，共 `34 passed`、零失败、零跳过。覆盖 `ABQ-001`、`ABQ-003`、`ABQ-004`、`ABQ-005`、`ABQ-007`、`ABQ-013`、`REL-001`、`REL-002`、`REL-003`、`REL-004`、`REL-005`、`REL-006`、`REL-007` 和 `REL-010`。
 
-当前运行中的 Abaqus MCP v5.0.3 心跳正常，但该 CAE 进程仍加载旧的 Python 2 字符串校验逻辑，因此实时上下文检查按 `ABQ-007` 正确标记为 warn。重启或重载已修复插件后，需在独立 QA 项目中重新执行 `ABQ-005`。
+独立 Abaqus/CAE 2023 实机验证确认 MCP v5.0.3 的 Python 2 `unicode` 修复生效：Bridge 心跳、模型、视口和 Job 上下文均可读取，`overall_status=ready`、`mcp_ready=true`。真实三维带孔板验收状态为 `archived`，最大位移 `0.35021 mm`、反力 `53.88 kN`、最大 Mises 应力 `300 MPa`、应力集中比 `1.3919`；ODB 为真实求解器输出。冻结 ZIP 的最终体积和 SHA256 以 GitHub Release 附件为准。

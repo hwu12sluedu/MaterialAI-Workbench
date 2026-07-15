@@ -2,12 +2,15 @@
 
 ## Unreleased
 
+## 0.3.0 - 2026-07-15
+
 ### Added
 
 - Read-only Abaqus environment diagnostics with separate batch-runtime and MCP readiness evidence.
 - Resumable 3D plate-with-hole acceptance workflow covering CAE/INP generation, real Job submission, ODB feature extraction, engineering sanity checks and case-library indexing.
 - Desktop pages for system diagnostics and the plate-with-hole acceptance workflow.
 - Machine-readable diagnostic and acceptance-manifest schemas plus a black-box functional test handoff.
+- Independent release verification through the public `MaterialAI-Workbench-QA` repository.
 
 ### Fixed
 
@@ -16,6 +19,7 @@
 - Treat the local SMAPython `_ctypes` error during `odb.close()` as a recorded close warning after successful extraction.
 - Keep diagnostic CLI JSON safe when `conda run` relays output through a Windows GBK parent console.
 - Reject stale or failed PyInstaller output, prefer the selected Python runtime DLLs, bound frozen-app smoke time and delete failed portable archives.
+- Remove upstream PyArrow and scikit-learn test fixtures before creating the public Windows ZIP.
 
 ## 0.2.0 - 2026-07-14
 

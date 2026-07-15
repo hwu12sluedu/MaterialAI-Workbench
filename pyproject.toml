@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "materialai-workbench"
-version = "0.3.0.dev0"
+version = "0.3.0"
 description = "Local engineering workbench for material models, Abaqus workflows and simulation data"
 authors = [
   { name = "Han Wu", email = "wuhan0314@163.com" }
