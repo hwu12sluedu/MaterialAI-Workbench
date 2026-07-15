@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "materialai-workbench"
-version = "0.2.0"
+version = "0.3.0"
 description = "Local engineering workbench for material models, Abaqus workflows and simulation data"
 authors = [
   { name = "Han Wu", email = "wuhan0314@163.com" }
@@ -35,7 +35,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "black", "build", "twine", "mkdocs", "mkdocs-material", "ipympl"]
+dev = ["pytest", "black", "build", "twine", "mkdocs", "mkdocs-material", "ipympl", "jsonschema>=4"]
 app = ["streamlit", "pandas", "plotly>=6.0"]
 desktop = ["pywebview>=6.0,<7"]
 packaging = ["pyinstaller>=6.18,<7"]
@@ -50,6 +50,8 @@ materialai-composite-batch = "material_ai_workbench.run_composite_batch:main"
 materialai-composite-closed-loop = "material_ai_workbench.run_composite_closed_loop:main"
 materialai-metal-closed-loop = "material_ai_workbench.run_metal_closed_loop:main"
 materialai-product-closed-loop = "material_ai_workbench.run_product_closed_loop:main"
+materialai-diagnostics = "material_ai_workbench.abaqus_diagnostics:main"
+materialai-plate-hole = "material_ai_workbench.plate_hole_acceptance:main"
 
 [tool.setuptools]
 packages = [

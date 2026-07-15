@@ -4,10 +4,10 @@
 
 ## 统计
 
-- 模块数：42
-- 顶层公开函数：193
-- 公开类：51
-- 公开类方法：87
+- 模块数：44
+- 顶层公开函数：198
+- 公开类：56
+- 公开类方法：88
 
 ## 使用方式
 
@@ -285,6 +285,37 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 - 行号：44
 
 
+## `material_ai_workbench.abaqus_diagnostics`
+
+- 文件：`material_ai_workbench/abaqus_diagnostics.py`
+- 模块说明：Abaqus installation, batch runtime and MCP bridge diagnostics.
+
+### 顶层函数
+
+| 函数 | 行号 | 说明 |
+|---|---:|---|
+| `run_abaqus_diagnostics(config: AbaqusDiagnosticConfig \| None = None)` | 88 | Run read-only diagnostics and persist JSON plus Markdown evidence. |
+| `main(argv: list[str] \| None = None)` | 414 | 待补充 |
+
+### 类与方法
+
+#### `DiagnosticCheck`
+
+- 行号：35
+
+#### `AbaqusDiagnosticConfig`
+
+- 行号：48
+
+#### `AbaqusDiagnosticReport`
+
+- 行号：60
+
+| 方法 | 行号 | 说明 |
+|---|---:|---|
+| `to_dict(self)` | 71 | 待补充 |
+
+
 ## `material_ai_workbench.abaqus_mcp_client`
 
 - 文件：`material_ai_workbench/abaqus_mcp_client.py`
@@ -294,44 +325,44 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 
 | 函数 | 行号 | 说明 |
 |---|---:|---|
-| `request_bridge(method: str, params: dict[str, Any] \| None = None, config: AbaqusMcpConfig \| None = None)` | 61 | Send one request to the Abaqus GUI socket bridge. |
-| `ping_bridge(config: AbaqusMcpConfig \| None = None)` | 104 | Return a user-facing connection status. |
-| `execute_kernel_code(code: str, config: AbaqusMcpConfig \| None = None)` | 149 | Execute a small Python chunk inside the live Abaqus/CAE kernel. |
-| `stop_bridge(config: AbaqusMcpConfig \| None = None)` | 160 | Request the Abaqus MCP socket bridge to stop. |
-| `set_workdir(path: Path \| str, config: AbaqusMcpConfig \| None = None)` | 170 | 待补充 |
-| `get_model_info(config: AbaqusMcpConfig \| None = None)` | 184 | 待补充 |
-| `list_jobs(config: AbaqusMcpConfig \| None = None)` | 246 | 待补充 |
-| `monitor_job_status(job_name: str = '', config: AbaqusMcpConfig \| None = None)` | 266 | 待补充 |
-| `submit_job(job_name: str, config: AbaqusMcpConfig \| None = None)` | 322 | 待补充 |
-| `inspect_odb(odb_path: Path \| str, config: AbaqusMcpConfig \| None = None)` | 338 | 待补充 |
-| `extract_odb_field_summary(odb_path: Path \| str, *, fields: list[str] \| tuple[str, ...] \| None = None, max_values_per_field: int = 500000, max_history_outputs: int = 200, config: AbaqusMcpConfig \| None = None)` | 403 | Extract final-frame field statistics from an ODB through Abaqus/CAE. |
-| `display_odb_contour(odb_path: Path \| str, *, field_label: str = 'S', invariant: str = 'Mises', output_position: str = 'INTEGRATION_POINT', config: AbaqusMcpConfig \| None = None)` | 667 | Display an ODB contour in the current Abaqus viewport before capture. |
-| `capture_viewport(output_dir: Path \| str, viewport_name: str = '', image_format: str = 'PNG', config: AbaqusMcpConfig \| None = None)` | 742 | 待补充 |
-| `create_session_snapshot(selected_run: Path \| None = None, config: AbaqusMcpConfig \| None = None, capture_image: bool = True)` | 800 | Capture status/model/job/viewport information into a local report folder. |
+| `request_bridge(method: str, params: dict[str, Any] \| None = None, config: AbaqusMcpConfig \| None = None)` | 65 | Send one request to the Abaqus GUI socket bridge. |
+| `ping_bridge(config: AbaqusMcpConfig \| None = None)` | 108 | Return a user-facing connection status. |
+| `execute_kernel_code(code: str, config: AbaqusMcpConfig \| None = None)` | 153 | Execute a small Python chunk inside the live Abaqus/CAE kernel. |
+| `stop_bridge(config: AbaqusMcpConfig \| None = None)` | 166 | Request the Abaqus MCP socket bridge to stop. |
+| `set_workdir(path: Path \| str, config: AbaqusMcpConfig \| None = None)` | 176 | 待补充 |
+| `get_model_info(config: AbaqusMcpConfig \| None = None)` | 192 | 待补充 |
+| `list_jobs(config: AbaqusMcpConfig \| None = None)` | 254 | 待补充 |
+| `monitor_job_status(job_name: str = '', config: AbaqusMcpConfig \| None = None)` | 274 | 待补充 |
+| `submit_job(job_name: str, config: AbaqusMcpConfig \| None = None)` | 332 | 待补充 |
+| `inspect_odb(odb_path: Path \| str, config: AbaqusMcpConfig \| None = None)` | 348 | 待补充 |
+| `extract_odb_field_summary(odb_path: Path \| str, *, fields: list[str] \| tuple[str, ...] \| None = None, max_values_per_field: int = 500000, max_history_outputs: int = 200, config: AbaqusMcpConfig \| None = None)` | 415 | Extract final-frame field statistics from an ODB through Abaqus/CAE. |
+| `display_odb_contour(odb_path: Path \| str, *, field_label: str = 'S', invariant: str = 'Mises', output_position: str = 'INTEGRATION_POINT', config: AbaqusMcpConfig \| None = None)` | 688 | Display an ODB contour in the current Abaqus viewport before capture. |
+| `capture_viewport(output_dir: Path \| str, viewport_name: str = '', image_format: str = 'PNG', config: AbaqusMcpConfig \| None = None)` | 771 | 待补充 |
+| `create_session_snapshot(selected_run: Path \| None = None, config: AbaqusMcpConfig \| None = None, capture_image: bool = True, output_root: Path \| str \| None = None)` | 831 | Capture status/model/job/viewport information into a local report folder. |
 
 ### 类与方法
 
 #### `AbaqusMcpError(RuntimeError)`
 
-- 行号：27
+- 行号：31
 - 说明：Raised when the Abaqus MCP bridge cannot complete a request.
 
 #### `AbaqusMcpConnectionError(AbaqusMcpError)`
 
-- 行号：31
+- 行号：35
 - 说明：Raised when the Abaqus MCP bridge endpoint is unreachable.
 
 #### `AbaqusMcpConfig`
 
-- 行号：36
+- 行号：40
 
 #### `AbaqusMcpStatus`
 
-- 行号：43
+- 行号：47
 
 #### `AbaqusMcpSnapshot`
 
-- 行号：53
+- 行号：57
 
 
 ## `material_ai_workbench.batch_simulation`
@@ -842,6 +873,30 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 - 行号：98
 
 
+## `material_ai_workbench.plate_hole_acceptance`
+
+- 文件：`material_ai_workbench/plate_hole_acceptance.py`
+- 模块说明：Resumable Abaqus acceptance workflow for a 3D plate with a circular hole.
+
+### 顶层函数
+
+| 函数 | 行号 | 说明 |
+|---|---:|---|
+| `run_plate_hole_acceptance(config: PlateHoleAcceptanceConfig \| None = None, *, execute: bool = False, run_dir: Path \| str \| None = None)` | 90 | Prepare or execute the plate-hole workflow and persist every state change. |
+| `resume_plate_hole_acceptance(run_dir: Path \| str, *, execute: bool = True, submit_job: bool \| None = None, archive_case: bool \| None = None, backend: str \| None = None)` | 351 | Resume a prepared or interrupted run from its persisted configuration. |
+| `main(argv: list[str] \| None = None)` | 1321 | 待补充 |
+
+### 类与方法
+
+#### `PlateHoleAcceptanceConfig`
+
+- 行号：50
+
+#### `PlateHoleAcceptanceResult`
+
+- 行号：78
+
+
 ## `material_ai_workbench.run_composite_batch`
 
 - 文件：`material_ai_workbench/run_composite_batch.py`
@@ -944,7 +999,7 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 
 | 函数 | 行号 | 说明 |
 |---|---:|---|
-| `main()` | 173 | 待补充 |
+| `main()` | 197 | 待补充 |
 
 ## `material_ai_workbench.surrogate_model`
 

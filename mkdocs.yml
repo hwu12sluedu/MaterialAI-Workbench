@@ -7,6 +7,7 @@ nav:
   - 用户指南:
       - Windows 客户端: DESKTOP_CLIENT_CN.md
       - 功能边界与验收: CAPABILITY_BOUNDARIES_CN.md
+      - Abaqus 三维带孔板闭环: ABAQUS_CLOSED_LOOP_V03_CN.md
       - Abaqus MCP: ABAQUS_MCP_WORKBENCH_CN.md
       - 案例库: CASE_LIBRARY_USER_GUIDE_CN.md
       - 自然语言服务（可选）: NATURAL_LANGUAGE_SERVICE_CN.md
@@ -27,6 +28,9 @@ nav:
       - API 清单: api/API_INVENTORY_CN.md
   - 开发:
       - 源码与 Windows 打包: DEVELOPMENT_CN.md
+  - 测试:
+      - 功能测试清单: testing/FUNCTIONAL_TEST_CHECKLIST_CN.md
+      - 独立 QA 项目交接: testing/QA_PROJECT_HANDOFF_CN.md
 
 theme:
   name: material

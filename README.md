@@ -32,7 +32,9 @@
 |---|---|
 | 材料模型 | J2、Hill、Barlat 屈服实验；Neo-Hookean、Mooney-Rivlin 曲线；pyLabFEA SVM/神经网络实验 |
 | 数据导入 | 实验应力-应变曲线和 Abaqus CSV 校验、归一化、预览与训练配置转换 |
+| 系统诊断 | 分别检查用户工作区、Abaqus 批处理运行时、SMAPython 与 MCP 实时桥接 |
 | Abaqus 验证 | UMAT 单元验算、INP/脚本生成、Job 队列、ODB 场变量与帧序列提取 |
+| 三维验收算例 | 带孔板参数化建模、真实 Job、ODB 特征、工程检查、断点恢复和案例归档 |
 | CAE 实时连接 | 通过 Abaqus MCP Socket Bridge 查询模型和 Job、提交作业、读取 ODB、保存视口截图 |
 | 复合材料 | 带取向的 Fiber/Interface/Matrix 三相体素 RVE、六工况数据准备、三维带孔板验证脚本 |
 | 案例与模型 | 索引 INP/ODB/CSV/报告，提取特征，导出训练集，管理材料预设和代理模型 |
@@ -60,6 +62,8 @@
 4. 先读取模型与 Job 状态，再显式确认提交或后处理动作。
 
 详细说明见 [Abaqus MCP 使用指南](docs/ABAQUS_MCP_WORKBENCH_CN.md)。
+
+三维带孔板闭环可先准备、再显式提交，并严格区分 `prepared`、`built`、`solved`、`validated` 和 `archived`。操作与实机基线见 [Abaqus 三维带孔板闭环](docs/ABAQUS_CLOSED_LOOP_V03_CN.md)。
 
 ## 从源码运行
 
@@ -95,6 +99,9 @@ python -m build
 
 - [Windows 客户端使用与排错](docs/DESKTOP_CLIENT_CN.md)
 - [功能边界与验收说明](docs/CAPABILITY_BOUNDARIES_CN.md)
+- [Abaqus 三维带孔板闭环](docs/ABAQUS_CLOSED_LOOP_V03_CN.md)
+- [功能软件测试清单](docs/testing/FUNCTIONAL_TEST_CHECKLIST_CN.md)
+- [独立黑盒 QA 仓库](https://github.com/hwu12sluedu/MaterialAI-Workbench-QA)
 - [案例库使用指南](docs/CASE_LIBRARY_USER_GUIDE_CN.md)
 - [技术架构](docs/TECHNICAL_ARCHITECTURE_CN.md)
 - [pyLabFEA Notebook 与源码精读](docs/learning/PYLABFEA_NOTEBOOK_SOURCE_WALKTHROUGH_CN.md)
