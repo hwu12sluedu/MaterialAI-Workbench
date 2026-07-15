@@ -101,6 +101,7 @@ python -m build
 - [功能边界与验收说明](docs/CAPABILITY_BOUNDARIES_CN.md)
 - [Abaqus 三维带孔板闭环](docs/ABAQUS_CLOSED_LOOP_V03_CN.md)
 - [功能软件测试清单](docs/testing/FUNCTIONAL_TEST_CHECKLIST_CN.md)
+- [独立黑盒 QA 仓库](https://github.com/hwu12sluedu/MaterialAI-Workbench-QA)
 - [案例库使用指南](docs/CASE_LIBRARY_USER_GUIDE_CN.md)
 - [技术架构](docs/TECHNICAL_ARCHITECTURE_CN.md)
 - [pyLabFEA Notebook 与源码精读](docs/learning/PYLABFEA_NOTEBOOK_SOURCE_WALKTHROUGH_CN.md)

@@ -1,6 +1,6 @@
-# 独立功能测试项目交接说明
+# 独立功能测试项目说明
 
-后续单独建立 `MaterialAI-Workbench-QA` 仓库。它面向发布包做黑盒测试，不直接导入 `material_ai_workbench` 源码，避免“用产品内部实现证明产品自己正确”。
+独立仓库 [MaterialAI-Workbench-QA](https://github.com/hwu12sluedu/MaterialAI-Workbench-QA) 面向发布包做黑盒测试，不直接导入 `material_ai_workbench` 源码，避免“用产品内部实现证明产品自己正确”。
 
 ## 1. 项目目标
 

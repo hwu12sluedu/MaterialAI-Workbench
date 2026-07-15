@@ -41,7 +41,7 @@ materialai-diagnostics --probe-commands
 materialai-plate-hole --name release_candidate --execute --submit-job --archive-case --backend batch
 ```
 
-功能黑盒清单见 `docs/testing/FUNCTIONAL_TEST_CHECKLIST_CN.md`；后续独立测试仓库的边界见 `docs/testing/QA_PROJECT_HANDOFF_CN.md`。
+功能黑盒清单见 `docs/testing/FUNCTIONAL_TEST_CHECKLIST_CN.md`；发布包的独立黑盒门禁由 [MaterialAI-Workbench-QA](https://github.com/hwu12sluedu/MaterialAI-Workbench-QA) 执行，边界说明见 `docs/testing/QA_PROJECT_HANDOFF_CN.md`。
 
 `slow` 测试包含耗时更长的上游训练或集成检查，发布前按需要单独运行。
 
