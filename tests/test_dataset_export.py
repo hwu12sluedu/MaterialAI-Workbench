@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import csv
+import json
 from pathlib import Path
 
-from material_ai_workbench.case_library import append_odb_extraction, append_odb_frame_series, filter_cases, infer_case_type, scan_case_folder
+from material_ai_workbench.case_library import (
+    append_odb_extraction,
+    append_odb_frame_series,
+    filter_cases,
+    infer_case_type,
+    scan_case_folder,
+)
 from material_ai_workbench.dataset_export import export_case_dataset
-
 
 SAMPLE_INP = """*Heading
 *Node
@@ -62,7 +68,9 @@ def test_export_case_dataset_builds_ml_index_files(tmp_path) -> None:
             "odb_path": str(source / "job.odb"),
             "fields_requested": ["S", "U"],
             "regions_requested": ["FIXED"],
-            "regions_found": [{"name": "FIXED", "kind": "node_set", "scope": "assembly"}],
+            "regions_found": [
+                {"name": "FIXED", "kind": "node_set", "scope": "assembly"}
+            ],
             "row_count": 20,
             "step_count": 1,
             "csv_path": str(tmp_path / "series.csv"),
@@ -71,7 +79,9 @@ def test_export_case_dataset_builds_ml_index_files(tmp_path) -> None:
         },
     )
 
-    export = export_case_dataset(cases_root=cases_root, output_root=tmp_path / "datasets", name="unit")
+    export = export_case_dataset(
+        cases_root=cases_root, output_root=tmp_path / "datasets", name="unit"
+    )
 
     assert export.case_count == 1
     assert export.row_count == 1
@@ -87,7 +97,9 @@ def test_export_case_dataset_builds_ml_index_files(tmp_path) -> None:
     assert rows[0]["latest_odb_max_mises"] == "100.0"
     assert rows[0]["abaqus_max_mises"] == "100.0"
     assert rows[0]["latest_frame_series_rows"] == "20"
-    with export.frame_series_index_csv.open("r", encoding="utf-8", newline="") as handle:
+    with export.frame_series_index_csv.open(
+        "r", encoding="utf-8", newline=""
+    ) as handle:
         series_rows = list(csv.DictReader(handle))
     assert series_rows[0]["fields"] == "S;U"
     assert series_rows[0]["regions_requested"] == "FIXED"
@@ -121,6 +133,54 @@ def test_export_case_dataset_can_use_selected_case_dirs(tmp_path) -> None:
     assert rows[0]["case_id"] != first.case_id
 
 
+def test_training_only_export_excludes_cases_that_fail_quality_gate(tmp_path) -> None:
+    cases_root = tmp_path / "cases"
+    solved_source = tmp_path / "solved"
+    prepared_source = tmp_path / "prepared"
+    solved_source.mkdir()
+    prepared_source.mkdir()
+    for source in (solved_source, prepared_source):
+        (source / "model.inp").write_text(SAMPLE_INP, encoding="utf-8")
+    (solved_source / "job.odb").write_text("placeholder", encoding="utf-8")
+    (solved_source / "job.sta").write_text(
+        "THE ANALYSIS HAS COMPLETED SUCCESSFULLY", encoding="utf-8"
+    )
+    (solved_source / "results.csv").write_text(
+        "frame,S_Mises\n0,10\n1,100\n", encoding="utf-8"
+    )
+    solved = scan_case_folder(
+        solved_source,
+        title="solved",
+        units="mm-N-s-MPa",
+        parameters={"material_type": "j2"},
+        cases_root=cases_root,
+    )
+    prepared = scan_case_folder(
+        prepared_source,
+        title="prepared",
+        cases_root=cases_root,
+    )
+
+    export = export_case_dataset(
+        cases_root=cases_root,
+        output_root=tmp_path / "datasets",
+        name="training-only",
+        training_only=True,
+    )
+    manifest = json.loads(export.manifest_json.read_text(encoding="utf-8"))
+    with export.dataset_csv.open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+
+    assert export.source_case_count == 2
+    assert export.case_count == 1
+    assert export.skipped_case_count == 1
+    assert rows[0]["case_id"] == solved.case_id
+    assert rows[0]["training_eligible"] == "True"
+    assert rows[0]["execution_state"] == "solved"
+    assert manifest["skipped_cases"][0]["case_id"] == prepared.case_id
+    assert "units_not_declared" in manifest["skipped_cases"][0]["blocking_reasons"]
+
+
 def test_filter_cases_supports_export_wizard_criteria(tmp_path) -> None:
     cases_root = tmp_path / "cases"
     metal_source = tmp_path / "metal_case"
@@ -149,7 +209,13 @@ def test_filter_cases_supports_export_wizard_criteria(tmp_path) -> None:
     assert infer_case_type(metal) == "metal"
     assert infer_case_type(composite) == "composite"
 
-    rows = filter_cases([metal, composite], tags="j2", statuses=["success"], material_types=["j2"], case_types=["metal"])
+    rows = filter_cases(
+        [metal, composite],
+        tags="j2",
+        statuses=["success"],
+        material_types=["j2"],
+        case_types=["metal"],
+    )
     assert [case.case_id for case in rows] == [metal.case_id]
 
     rows = filter_cases([metal, composite], tags="rve", case_types=["composite"])

@@ -10,13 +10,17 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
+from material_ai_workbench.case_intelligence import grounding_provenance
 from material_ai_workbench.config import REPO_ROOT, WORKSPACE_ROOT
-
 
 ENV_FILE = Path(
     os.environ.get(
         "MATERIALAI_ENV_FILE",
-        str(REPO_ROOT / ".env" if (REPO_ROOT / "pyproject.toml").exists() else WORKSPACE_ROOT / ".env"),
+        str(
+            REPO_ROOT / ".env"
+            if (REPO_ROOT / "pyproject.toml").exists()
+            else WORKSPACE_ROOT / ".env"
+        ),
     )
 ).expanduser()
 LLM_PROVIDER_PRESETS: dict[str, dict[str, Any]] = {
@@ -88,7 +92,11 @@ def read_env_file(path: Path = ENV_FILE) -> dict[str, str]:
 
 def write_env_values(path: Path, updates: dict[str, str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    existing_lines = path.read_text(encoding="utf-8", errors="replace").splitlines() if path.exists() else []
+    existing_lines = (
+        path.read_text(encoding="utf-8", errors="replace").splitlines()
+        if path.exists()
+        else []
+    )
     remaining = dict(updates)
     lines: list[str] = []
     for line in existing_lines:
@@ -117,7 +125,9 @@ _load_dotenv_into_environ()
 
 DEFAULT_LLM_BASE_URL = os.environ.get("MATERIALAI_LLM_BASE_URL", "")
 DEFAULT_LLM_MODEL = os.environ.get("MATERIALAI_LLM_MODEL", "")
-DEFAULT_LLM_API_KEY_ENV = os.environ.get("MATERIALAI_LLM_API_KEY_ENV", "MATERIALAI_LLM_API_KEY")
+DEFAULT_LLM_API_KEY_ENV = os.environ.get(
+    "MATERIALAI_LLM_API_KEY_ENV", "MATERIALAI_LLM_API_KEY"
+)
 
 Transport = Callable[[str, dict[str, str], dict[str, Any], float], dict[str, Any]]
 
@@ -133,9 +143,21 @@ class LlmResponseError(RuntimeError):
 @dataclass
 class LlmChatConfig:
     provider_name: str = "custom"
-    base_url: str = field(default_factory=lambda: os.environ.get("MATERIALAI_LLM_BASE_URL", DEFAULT_LLM_BASE_URL))
-    model: str = field(default_factory=lambda: os.environ.get("MATERIALAI_LLM_MODEL", DEFAULT_LLM_MODEL))
-    api_key_env: str = field(default_factory=lambda: os.environ.get("MATERIALAI_LLM_API_KEY_ENV", DEFAULT_LLM_API_KEY_ENV))
+    base_url: str = field(
+        default_factory=lambda: os.environ.get(
+            "MATERIALAI_LLM_BASE_URL", DEFAULT_LLM_BASE_URL
+        )
+    )
+    model: str = field(
+        default_factory=lambda: os.environ.get(
+            "MATERIALAI_LLM_MODEL", DEFAULT_LLM_MODEL
+        )
+    )
+    api_key_env: str = field(
+        default_factory=lambda: os.environ.get(
+            "MATERIALAI_LLM_API_KEY_ENV", DEFAULT_LLM_API_KEY_ENV
+        )
+    )
     timeout_seconds: float = 60.0
     require_api_key: bool = True
 
@@ -145,11 +167,17 @@ class LlmChatConfig:
 
     def validate(self) -> None:
         if not self.base_url.strip():
-            raise LlmConfigError("LLM base_url is empty. Set MATERIALAI_LLM_BASE_URL or enter it in the App.")
+            raise LlmConfigError(
+                "LLM base_url is empty. Set MATERIALAI_LLM_BASE_URL or enter it in the App."
+            )
         if not self.model.strip():
-            raise LlmConfigError("LLM model is empty. Set MATERIALAI_LLM_MODEL or enter it in the App.")
+            raise LlmConfigError(
+                "LLM model is empty. Set MATERIALAI_LLM_MODEL or enter it in the App."
+            )
         if self.require_api_key and not self.api_key:
-            raise LlmConfigError(f"LLM API key is missing. Set environment variable {self.api_key_env}.")
+            raise LlmConfigError(
+                f"LLM API key is missing. Set environment variable {self.api_key_env}."
+            )
 
     def to_public_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -183,15 +211,25 @@ def llm_config_from_env(env_path: Path = ENV_FILE) -> LlmChatConfig:
     values = read_env_file(env_path)
     for key, value in values.items():
         os.environ[key] = value
-    provider_name = values.get("MATERIALAI_LLM_PROVIDER", os.environ.get("MATERIALAI_LLM_PROVIDER", "custom"))
-    require_value = values.get(
-        "MATERIALAI_LLM_REQUIRE_API_KEY",
-        os.environ.get("MATERIALAI_LLM_REQUIRE_API_KEY", "true"),
-    ).strip().lower()
+    provider_name = values.get(
+        "MATERIALAI_LLM_PROVIDER", os.environ.get("MATERIALAI_LLM_PROVIDER", "custom")
+    )
+    require_value = (
+        values.get(
+            "MATERIALAI_LLM_REQUIRE_API_KEY",
+            os.environ.get("MATERIALAI_LLM_REQUIRE_API_KEY", "true"),
+        )
+        .strip()
+        .lower()
+    )
     return LlmChatConfig(
         provider_name=provider_name,
-        base_url=values.get("MATERIALAI_LLM_BASE_URL", os.environ.get("MATERIALAI_LLM_BASE_URL", "")),
-        model=values.get("MATERIALAI_LLM_MODEL", os.environ.get("MATERIALAI_LLM_MODEL", "")),
+        base_url=values.get(
+            "MATERIALAI_LLM_BASE_URL", os.environ.get("MATERIALAI_LLM_BASE_URL", "")
+        ),
+        model=values.get(
+            "MATERIALAI_LLM_MODEL", os.environ.get("MATERIALAI_LLM_MODEL", "")
+        ),
         api_key_env=values.get(
             "MATERIALAI_LLM_API_KEY_ENV",
             os.environ.get("MATERIALAI_LLM_API_KEY_ENV", "MATERIALAI_LLM_API_KEY"),
@@ -205,12 +243,16 @@ def apply_llm_config(config: LlmChatConfig, api_key_value: str | None = None) ->
     os.environ["MATERIALAI_LLM_BASE_URL"] = config.base_url.strip()
     os.environ["MATERIALAI_LLM_MODEL"] = config.model.strip()
     os.environ["MATERIALAI_LLM_API_KEY_ENV"] = config.api_key_env.strip()
-    os.environ["MATERIALAI_LLM_REQUIRE_API_KEY"] = "true" if config.require_api_key else "false"
+    os.environ["MATERIALAI_LLM_REQUIRE_API_KEY"] = (
+        "true" if config.require_api_key else "false"
+    )
     if api_key_value and config.api_key_env:
         os.environ[config.api_key_env] = api_key_value.strip()
 
 
-def save_llm_config(config: LlmChatConfig, api_key_value: str | None = None, env_path: Path = ENV_FILE) -> Path:
+def save_llm_config(
+    config: LlmChatConfig, api_key_value: str | None = None, env_path: Path = ENV_FILE
+) -> Path:
     apply_llm_config(config, api_key_value=api_key_value)
     updates = {
         "MATERIALAI_LLM_PROVIDER": config.provider_name,
@@ -239,7 +281,9 @@ def test_llm_connection(
             transport=transport,
         )
     except Exception as exc:
-        return LlmConnectionTest(ok=False, message=str(exc), config=config.to_public_dict())
+        return LlmConnectionTest(
+            ok=False, message=str(exc), config=config.to_public_dict()
+        )
     return LlmConnectionTest(
         ok=True,
         message="语言模型已返回可解析的仿真任务 JSON。",
@@ -249,7 +293,12 @@ def test_llm_connection(
     )
 
 
-def plan_task_with_llm(prompt: str, config: LlmChatConfig, transport: Transport | None = None) -> LlmTaskPlan:
+def plan_task_with_llm(
+    prompt: str,
+    config: LlmChatConfig,
+    transport: Transport | None = None,
+    case_context: dict[str, Any] | None = None,
+) -> LlmTaskPlan:
     """Call an OpenAI-compatible chat endpoint and parse a task JSON response."""
 
     config.validate()
@@ -263,7 +312,7 @@ def plan_task_with_llm(prompt: str, config: LlmChatConfig, transport: Transport 
         },
         {
             "role": "user",
-            "content": _task_prompt(prompt),
+            "content": _task_prompt(prompt, case_context=case_context),
         },
     ]
     body = {
@@ -277,10 +326,14 @@ def plan_task_with_llm(prompt: str, config: LlmChatConfig, transport: Transport 
         headers["Authorization"] = f"Bearer {config.api_key}"
 
     endpoint = config.base_url.rstrip("/") + "/chat/completions"
-    response = (transport or _post_json)(endpoint, headers, body, float(config.timeout_seconds))
+    response = (transport or _post_json)(
+        endpoint, headers, body, float(config.timeout_seconds)
+    )
     raw_text = _extract_chat_text(response)
     task_payload = _extract_json_payload(raw_text)
     warnings = _payload_warnings(task_payload)
+    if case_context:
+        warnings.extend(_attach_grounding(task_payload, case_context))
     return LlmTaskPlan(
         config=config.to_public_dict(),
         raw_text=raw_text,
@@ -322,7 +375,9 @@ def _chat_completion(
     if cfg.api_key:
         headers["Authorization"] = f"Bearer {cfg.api_key}"
     endpoint = cfg.base_url.rstrip("/") + "/chat/completions"
-    response = (transport or _post_json)(endpoint, headers, body, float(cfg.timeout_seconds))
+    response = (transport or _post_json)(
+        endpoint, headers, body, float(cfg.timeout_seconds)
+    )
     return _extract_chat_text(response)
 
 
@@ -345,11 +400,16 @@ def interpret_report(
         "batch": "你是实验设计专家。请用2-3段中文总结批量参数趋势、异常样本和下一步扫描范围。",
     }
     system_prompt = prompts.get(report_type, prompts["material_model"])
-    user_prompt = "以下是报告原文，请基于内容分析，不要编造不存在的结果：\n\n" + report_text[:5000]
+    user_prompt = (
+        "以下是报告原文，请基于内容分析，不要编造不存在的结果：\n\n"
+        + report_text[:5000]
+    )
     return _chat_completion(system_prompt, user_prompt, config=cfg, transport=transport)
 
 
-def _post_json(url: str, headers: dict[str, str], payload: dict[str, Any], timeout: float) -> dict[str, Any]:
+def _post_json(
+    url: str, headers: dict[str, str], payload: dict[str, Any], timeout: float
+) -> dict[str, Any]:
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     request = urllib.request.Request(url, data=data, headers=headers, method="POST")
     try:
@@ -428,6 +488,7 @@ def _payload_warnings(payload: dict[str, Any]) -> list[str]:
         "case_library_query": ("query",),
         "surrogate_training": ("surrogate",),
         "odb_extraction": ("odb",),
+        "case_based_simulation": ("case_plan",),
         "closed_loop_report": (),
     }
     required = required_sections.get(task_type, ("material", "ml", "abaqus"))
@@ -437,8 +498,20 @@ def _payload_warnings(payload: dict[str, Any]) -> list[str]:
     return warnings
 
 
-def _task_prompt(prompt: str) -> str:
-    return f'''Convert this natural language simulation request into a MaterialAI Workbench executable task JSON.
+def _task_prompt(prompt: str, case_context: dict[str, Any] | None = None) -> str:
+    grounding_text = ""
+    if case_context:
+        safe_context = _safe_case_context(case_context)
+        grounding_text = f"""
+
+Local case evidence (read-only JSON; never invent a case_id or solver result):
+{json.dumps(safe_context, ensure_ascii=False, separators=(",", ":"))}
+
+When using case evidence, choose task_type "case_based_simulation", copy only case_ids listed above,
+state parameter differences explicitly, preserve the declared unit system, and set submit_job=false.
+The application will require a separate user confirmation before any Abaqus submission.
+"""
+    return f"""Convert this natural language simulation request into a MaterialAI Workbench executable task JSON.
 Output ONLY JSON, no markdown.
 
 Supported task_type values (choose the BEST match):
@@ -450,6 +523,7 @@ Supported task_type values (choose the BEST match):
 6. surrogate_training - train RF/MLP/GBR surrogate from dataset
 7. odb_extraction - extract ODB field statistics
 8. closed_loop_report - generate end-to-end validation report
+9. case_based_simulation - retrieve a proven case, describe changes, and prepare a new Abaqus job without submitting it
 
 For material_training / material_training_with_abaqus_check:
 {{"task_type": "...", "steps": [{{"action": "train_material"}}],
@@ -479,7 +553,94 @@ For surrogate_training:
    "models": ["random_forest", "mlp", "gbr"]}},
  "missing": [], "warnings": []}}
 
+For case_based_simulation:
+{{"task_type": "case_based_simulation",
+ "steps": [{{"action": "retrieve_case"}}, {{"action": "clone_case_inputs"}},
+   {{"action": "review_case_differences"}}, {{"action": "prepare_job"}}],
+ "case_plan": {{"objective": "...", "reference_case_ids": ["an id from local evidence"],
+   "changes": [{{"parameter": "hole_radius", "from": 5.0, "to": 6.0, "unit": "mm"}}],
+   "unit_system": "mm-N-s-MPa", "submit_job": false}},
+ "missing": [], "warnings": []}}
+
 Always include "steps" array, "missing" array, and "warnings" array.
 If the platform does not support a requested capability, explain in warnings.
 
-Request: {prompt}'''
+Request: {prompt}{grounding_text}"""
+
+
+def _safe_case_context(context: dict[str, Any]) -> dict[str, Any]:
+    safe_cases = []
+    allowed_case_fields = {
+        "case_id",
+        "title",
+        "retrieval_score",
+        "matched_terms",
+        "execution_state",
+        "training_eligible",
+        "quality_score",
+        "units",
+        "material_type",
+        "material_parameters",
+        "geometry",
+        "loading",
+        "mesh",
+        "result_labels",
+        "source_fingerprint",
+    }
+    for item in context.get("cases", []) or []:
+        if isinstance(item, dict):
+            safe_cases.append(
+                {key: item[key] for key in allowed_case_fields if key in item}
+            )
+    return {
+        "schema_version": str(context.get("schema_version", "1.0")),
+        "grounding_id": str(context.get("grounding_id", "")),
+        "retrieval_method": str(context.get("retrieval_method", "")),
+        "read_only": True,
+        "requires_user_confirmation": True,
+        "retrieved_case_ids": [
+            str(value) for value in context.get("retrieved_case_ids", []) or []
+        ],
+        "cases": safe_cases,
+    }
+
+
+def _attach_grounding(
+    task_payload: dict[str, Any], context: dict[str, Any]
+) -> list[str]:
+    warnings: list[str] = []
+    provenance = grounding_provenance(context)
+    allowed_ids = [str(value) for value in provenance["retrieved_case_ids"]]
+    case_plan = task_payload.get("case_plan")
+    if not isinstance(case_plan, dict):
+        case_plan = {}
+        if task_payload.get("task_type") == "case_based_simulation":
+            task_payload["case_plan"] = case_plan
+    requested_ids = [
+        str(value)
+        for value in case_plan.get("reference_case_ids", []) or []
+        if str(value)
+    ]
+    invalid_ids = [value for value in requested_ids if value not in allowed_ids]
+    if invalid_ids:
+        warnings.append(
+            "LLM referenced case IDs outside local retrieval; unsupported IDs were removed: "
+            + ", ".join(invalid_ids)
+        )
+    valid_ids = [value for value in requested_ids if value in allowed_ids]
+    if task_payload.get("task_type") == "case_based_simulation":
+        case_plan["reference_case_ids"] = valid_ids or allowed_ids[:1]
+        case_plan["submit_job"] = False
+    task_payload["grounding"] = provenance
+    is_case_plan = task_payload.get("task_type") == "case_based_simulation"
+    task_payload["execution_policy"] = {
+        "mode": "plan_only" if is_case_plan else "requires_user_confirmation",
+        "abaqus_submission_allowed": False,
+        "requires_user_confirmation": True,
+    }
+    payload_warnings = task_payload.setdefault("warnings", [])
+    if not isinstance(payload_warnings, list):
+        payload_warnings = []
+        task_payload["warnings"] = payload_warnings
+    payload_warnings.extend(warnings)
+    return warnings

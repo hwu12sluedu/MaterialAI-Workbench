@@ -10,14 +10,30 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from material_ai_workbench.abaqus_bridge import AbaqusBridgeConfig, DEFAULT_ABAQUS_BAT, run_abaqus_verification
-from material_ai_workbench.case_library import append_odb_extraction, append_odb_frame_series, load_case_summary, save_case_summary, scan_case_folder
+from material_ai_workbench.abaqus_bridge import (
+    AbaqusBridgeConfig,
+    DEFAULT_ABAQUS_BAT,
+    run_abaqus_verification,
+)
+from material_ai_workbench.case_library import (
+    append_odb_extraction,
+    append_odb_frame_series,
+    load_case_summary,
+    save_case_summary,
+    scan_case_folder,
+)
 from material_ai_workbench.config import BATCHES_ROOT
 from material_ai_workbench.dataset_export import export_case_dataset
-from material_ai_workbench.odb_postprocess import run_case_odb_extraction, run_case_odb_frame_series_extraction
+from material_ai_workbench.odb_postprocess import (
+    run_case_odb_extraction,
+    run_case_odb_frame_series_extraction,
+)
 from material_ai_workbench.pipeline import WorkbenchConfig, run_material_workbench
-from material_ai_workbench.surrogate_model import DEFAULT_TARGET, surrogate_comparison_rows, train_surrogate_from_dataset
-
+from material_ai_workbench.surrogate_model import (
+    DEFAULT_TARGET,
+    surrogate_comparison_rows,
+    train_surrogate_from_dataset,
+)
 
 BATCH_ROOT = BATCHES_ROOT
 STALE_RUNNING_TIMEOUT = timedelta(hours=4)
@@ -139,7 +155,9 @@ def save_batch_plan(plan: BatchPlan) -> None:
     trend_path = _write_batch_trend_plot(plan)
     if trend_path:
         plan.data.setdefault("outputs", {})["batch_trend_png"] = str(trend_path)
-    plan.plan_path.write_text(json.dumps(plan.data, indent=2, ensure_ascii=False), encoding="utf-8")
+    plan.plan_path.write_text(
+        json.dumps(plan.data, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     _write_summary_csv(plan)
     plan.report_path.write_text(_batch_report(plan.data), encoding="utf-8")
 
@@ -149,7 +167,11 @@ def list_batch_plans(root: Path = BATCH_ROOT) -> list[Path]:
 
     if not root.exists():
         return []
-    plans = [path for path in root.iterdir() if path.is_dir() and (path / "batch_plan.json").exists()]
+    plans = [
+        path
+        for path in root.iterdir()
+        if path.is_dir() and (path / "batch_plan.json").exists()
+    ]
     return sorted(plans, key=lambda path: path.stat().st_mtime, reverse=True)
 
 
@@ -176,9 +198,21 @@ def run_batch_plan(
     for sample in plan.data.get("samples", []):
         if max_samples is not None and processed >= max_samples:
             break
-        if sample.get("status") not in {"pending", "failed", "material_completed", "abaqus_failed"}:
+        if sample.get("status") not in {
+            "pending",
+            "failed",
+            "material_completed",
+            "abaqus_failed",
+        }:
             continue
-        _run_one_sample(plan, sample, run_abaqus=run_abaqus, archive_cases=archive_cases, postprocess_odb=postprocess_odb, timeout_seconds=timeout_seconds)
+        _run_one_sample(
+            plan,
+            sample,
+            run_abaqus=run_abaqus,
+            archive_cases=archive_cases,
+            postprocess_odb=postprocess_odb,
+            timeout_seconds=timeout_seconds,
+        )
         processed += 1
         save_batch_plan(plan)
 
@@ -187,6 +221,7 @@ def run_batch_plan(
         dataset = export_case_dataset(
             name=f"{_safe_name(plan.data.get('name', 'batch'))}_dataset",
             case_dirs=_batch_case_dirs(plan),
+            training_only=True,
         )
         plan.data.setdefault("outputs", {})["dataset_dir"] = str(dataset.export_dir)
         plan.data["outputs"]["dataset_csv"] = str(dataset.dataset_csv)
@@ -198,11 +233,14 @@ def run_batch_plan(
             dataset = export_case_dataset(
                 name=f"{_safe_name(plan.data.get('name', 'batch'))}_dataset",
                 case_dirs=_batch_case_dirs(plan),
+                training_only=True,
             )
             dataset_dir = str(dataset.export_dir)
             plan.data.setdefault("outputs", {})["dataset_dir"] = dataset_dir
             plan.data["outputs"]["dataset_csv"] = str(dataset.dataset_csv)
-        surrogate = train_surrogate_from_dataset(dataset_dir, target_column=DEFAULT_TARGET, model_kind="random_forest")
+        surrogate = train_surrogate_from_dataset(
+            dataset_dir, target_column=DEFAULT_TARGET, model_kind="random_forest"
+        )
         plan.data.setdefault("outputs", {})["surrogate_run"] = str(surrogate.run_dir)
 
     save_batch_plan(plan)
@@ -255,7 +293,10 @@ def _run_one_sample(
                 youngs_modulus=float(sample["youngs_modulus"]),
                 poisson_ratio=float(sample["poisson_ratio"]),
                 yield_strength=float(sample["yield_strength"]),
-                hill_ratios=tuple(float(value) for value in sample.get("hill_ratios", DEFAULT_HILL_RATIOS)),
+                hill_ratios=tuple(
+                    float(value)
+                    for value in sample.get("hill_ratios", DEFAULT_HILL_RATIOS)
+                ),
                 c_value=float(sample["c_value"]),
                 gamma=float(sample["gamma"]),
                 n_load_cases=int(sample["n_load_cases"]),
@@ -274,7 +315,9 @@ def _run_one_sample(
             bridge = run_abaqus_verification(
                 AbaqusBridgeConfig(
                     run_dir=Path(sample["run_dir"]),
-                    max_load_cases=int(plan.data.get("settings", {}).get("max_abaqus_load_cases", 1)),
+                    max_load_cases=int(
+                        plan.data.get("settings", {}).get("max_abaqus_load_cases", 1)
+                    ),
                     abaqus_bat=DEFAULT_ABAQUS_BAT,
                     timeout_seconds=int(timeout_seconds),
                 )
@@ -291,7 +334,9 @@ def _run_one_sample(
         if archive_cases and sample.get("run_dir"):
             source = Path(sample.get("abaqus_work_dir") or sample["run_dir"])
             if not source or str(source) == "." or not source.exists():
-                sample["postprocess_error"] = f"Archive source is not available: {source}"
+                sample["postprocess_error"] = (
+                    f"Archive source is not available: {source}"
+                )
                 sample["status"] = "archive_failed"
                 return
             case = scan_case_folder(
@@ -299,17 +344,28 @@ def _run_one_sample(
                 title=f"Batch sample {sample['sample_id']}",
                 tags=["batch", sample["material_type"], "MaterialAI"],
                 description=f"自动批量样本：{sample['sample_id']}，yield_strength={sample['yield_strength']} MPa。",
-                status="success" if sample.get("status") in {"material_completed", "abaqus_completed"} else "needs_review",
+                status=(
+                    "success"
+                    if sample.get("status")
+                    in {"material_completed", "abaqus_completed"}
+                    else "needs_review"
+                ),
                 parameters=_sample_parameters(plan, sample),
+                units="mm-N-s-MPa",
+                source_mode="generated",
             )
             sample["case_dir"] = case.case_dir
             if postprocess_odb:
                 odb_path = _find_latest_odb(source)
                 if odb_path:
                     try:
-                        extraction = run_case_odb_extraction(case, odb_path, backend="auto")
+                        extraction = run_case_odb_extraction(
+                            case, odb_path, backend="auto"
+                        )
                         case = append_odb_extraction(case, extraction)
-                        series = run_case_odb_frame_series_extraction(case, odb_path, fields=["S", "U"])
+                        series = run_case_odb_frame_series_extraction(
+                            case, odb_path, fields=["S", "U"]
+                        )
                         case = append_odb_frame_series(case, series)
                         sample["case_dir"] = case.case_dir
                         sample["postprocess_status"] = "completed"
@@ -363,7 +419,9 @@ def _write_summary_csv(plan: BatchPlan) -> None:
     with plan.summary_csv.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=SAMPLE_COLUMNS)
         writer.writeheader()
-        writer.writerows([{key: row.get(key, "") for key in SAMPLE_COLUMNS} for row in rows])
+        writer.writerows(
+            [{key: row.get(key, "") for key in SAMPLE_COLUMNS} for row in rows]
+        )
 
 
 def _reset_stale_running_samples(plan: BatchPlan) -> None:
@@ -416,7 +474,13 @@ def _write_batch_trend_plot(plan: BatchPlan) -> Path | None:
     ax.set_title("Batch trend: material strength vs. Abaqus response")
     ax.grid(True, alpha=0.25)
     for sy, mises, sample_id in points:
-        ax.annotate(sample_id.split("_")[0], (sy, mises), textcoords="offset points", xytext=(5, 5), fontsize=8)
+        ax.annotate(
+            sample_id.split("_")[0],
+            (sy, mises),
+            textcoords="offset points",
+            xytext=(5, 5),
+            fontsize=8,
+        )
     fig.tight_layout()
     plot_path = plan.plan_dir / "batch_trend.png"
     try:
@@ -435,7 +499,9 @@ def _batch_report(data: dict[str, Any]) -> str:
     )
     counts: dict[str, int] = {}
     for sample in data.get("samples", []):
-        counts[sample.get("status", "unknown")] = counts.get(sample.get("status", "unknown"), 0) + 1
+        counts[sample.get("status", "unknown")] = (
+            counts.get(sample.get("status", "unknown"), 0) + 1
+        )
     trend_png = (data.get("outputs") or {}).get("batch_trend_png", "")
     trend_section = f"\n## 趋势图\n\n![Batch trend]({trend_png})\n" if trend_png else ""
     surrogate_section = _batch_surrogate_section(data)
@@ -516,8 +582,7 @@ def summarize_batch_with_llm(batch_dir: Path | str) -> str | None:
         "以下是批量材料参数扫描结果。请用2-3段中文总结："
         "(1) 屈服强度与最大 Mises 应力的关系是否合理；"
         "(2) 是否有异常样本；"
-        "(3) 建议下一步扫描范围。\n\n"
-        + "\n".join(lines)
+        "(3) 建议下一步扫描范围。\n\n" + "\n".join(lines)
     )
     return _chat_completion("你是仿真验证工程师，请简洁总结批量仿真结果。", prompt)
 
@@ -531,7 +596,11 @@ def _load_json(path: Path) -> dict[str, Any]:
 def _batch_case_dirs(plan: BatchPlan) -> list[Path]:
     case_dirs: list[Path] = []
     for sample in plan.data.get("samples", []):
-        if sample.get("status") not in {"postprocessed", "abaqus_completed", "postprocess_failed"}:
+        if sample.get("status") not in {
+            "postprocessed",
+            "abaqus_completed",
+            "postprocess_failed",
+        }:
             continue
         case_dir = sample.get("case_dir")
         if case_dir and Path(case_dir).exists():
@@ -567,7 +636,9 @@ def _sample_parameters(plan: BatchPlan, sample: dict[str, Any]) -> dict[str, Any
 def _find_latest_odb(root: Path) -> Path | None:
     if not root.exists():
         return None
-    candidates = sorted(root.rglob("*.odb"), key=lambda path: path.stat().st_mtime, reverse=True)
+    candidates = sorted(
+        root.rglob("*.odb"), key=lambda path: path.stat().st_mtime, reverse=True
+    )
     return candidates[0] if candidates else None
 
 
@@ -592,7 +663,12 @@ def _unique_plan_dir(output_root: Path, name: str) -> Path:
 
 
 def _safe_name(value: str) -> str:
-    return "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in str(value)).strip("_") or "batch"
+    return (
+        "".join(
+            ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in str(value)
+        ).strip("_")
+        or "batch"
+    )
 
 
 def _safe_number(value: float) -> str:

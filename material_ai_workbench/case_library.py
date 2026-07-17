@@ -15,8 +15,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from material_ai_workbench.case_package import (
+    CASE_PACKAGE_SCHEMA_VERSION,
+    evaluate_case_quality,
+    fingerprint_case_files,
+    fingerprint_file,
+    normalize_case_units,
+    write_case_package,
+)
+from material_ai_workbench.case_intelligence import rank_similar_cases
 from material_ai_workbench.config import CASES_ROOT as DEFAULT_CASES_ROOT
-
 
 CASES_ROOT = DEFAULT_CASES_ROOT
 
@@ -55,26 +63,25 @@ IGNORED_DIR_NAMES = {
     ".pytest_cache",
     ".ipynb_checkpoints",
 }
-LOAD_KEYWORDS = {"cload", "dload", "dsload", "pressure", "temperature", "film", "radiate"}
+LOAD_KEYWORDS = {
+    "cload",
+    "dload",
+    "dsload",
+    "pressure",
+    "temperature",
+    "film",
+    "radiate",
+}
 BOUNDARY_KEYWORDS = {"boundary", "initial conditions"}
 INTERACTION_KEYWORDS = {"contact", "contact pair", "surface interaction", "tie"}
-OUTPUT_KEYWORDS = {"output", "field output", "history output", "node output", "element output"}
+OUTPUT_KEYWORDS = {
+    "output",
+    "field output",
+    "history output",
+    "node output",
+    "element output",
+}
 TEXT_RESULT_EXTENSIONS = {".sta", ".msg", ".dat", ".log", ".rpt"}
-SIMILARITY_FEATURE_KEYS = (
-    "file_count",
-    "model_file_count",
-    "result_file_count",
-    "inp_node_count",
-    "inp_element_count",
-    "csv_row_count",
-    "max_mises",
-    "max_peeq",
-    "yield_strength",
-    "youngs_modulus",
-    "poisson_ratio",
-    "fiber_volume_fraction",
-    "hole_radius",
-)
 
 
 @dataclass
@@ -86,6 +93,8 @@ class CaseFile:
     category: str
     size_bytes: int
     modified_at: str
+    fingerprint: str = ""
+    fingerprint_mode: str = ""
 
 
 @dataclass
@@ -118,6 +127,12 @@ class CaseSummary:
     abaqus_results: dict[str, float] = field(default_factory=dict)
     odb_features: dict[str, float] = field(default_factory=dict)
     run_artifacts: dict[str, list[str]] = field(default_factory=dict)
+    schema_version: str = CASE_PACKAGE_SCHEMA_VERSION
+    source_fingerprint: str = ""
+    units: dict[str, Any] = field(default_factory=dict)
+    solver: dict[str, Any] = field(default_factory=dict)
+    provenance: dict[str, Any] = field(default_factory=dict)
+    quality: dict[str, Any] = field(default_factory=dict)
 
 
 def scan_case_folder(
@@ -130,11 +145,17 @@ def scan_case_folder(
     parameters: dict[str, Any] | None = None,
     lessons_learned: str = "",
     next_actions: str = "",
+    units: dict[str, Any] | str | None = None,
+    solver_version: str = "",
+    source_mode: str = "reference",
     cases_root: Path = CASES_ROOT,
 ) -> CaseSummary:
     source = Path(source_folder).expanduser().resolve()
     if not source.exists():
         raise FileNotFoundError(f"Case source does not exist: {source}")
+    normalized_source_mode = source_mode.strip().lower() or "reference"
+    if normalized_source_mode not in {"reference", "copy", "generated", "uploaded"}:
+        raise ValueError(f"Unsupported case source_mode: {source_mode}")
 
     normalized_tags = _normalize_tags(tags)
     case_id = _case_id(title)
@@ -152,8 +173,12 @@ def scan_case_folder(
     mesh_stats = _extract_mesh_stats(inp_features)
     abaqus_results = _extract_abaqus_results(result_features)
     odb_features = _extract_odb_features_from_results(result_features)
-    material_type = _infer_material_type(parameters or {}, inp_features, result_features)
+    material_type = _infer_material_type(
+        parameters or {}, inp_features, result_features
+    )
     run_artifacts = _collect_run_artifacts(files)
+    source_fingerprint = fingerprint_case_files(files)
+    normalized_units = normalize_case_units(units, parameters or {})
     now = datetime.now().isoformat(timespec="seconds")
     summary = CaseSummary(
         case_id=case_dir.name,
@@ -181,6 +206,15 @@ def scan_case_folder(
         abaqus_results=abaqus_results,
         odb_features=odb_features,
         run_artifacts=run_artifacts,
+        schema_version=CASE_PACKAGE_SCHEMA_VERSION,
+        source_fingerprint=source_fingerprint,
+        units=normalized_units,
+        solver={"name": "Abaqus", "version": solver_version.strip()},
+        provenance={
+            "source_mode": normalized_source_mode,
+            "imported_at": now,
+            "importer": "material_ai_workbench.case_library",
+        },
     )
     save_case_summary(summary)
     write_case_report(summary)
@@ -194,6 +228,9 @@ def batch_import_cases(
     status: str = "success",
     cases_root: Path = CASES_ROOT,
     skip_existing: bool = True,
+    units: dict[str, Any] | str | None = None,
+    solver_version: str = "",
+    source_mode: str = "reference",
 ) -> dict[str, Any]:
     """Scan a parent folder and import all sub-folders as individual cases.
 
@@ -212,7 +249,9 @@ def batch_import_cases(
     skipped: list[str] = []
     failed: list[dict[str, str]] = []
 
-    subdirs = [d for d in parent.iterdir() if d.is_dir() and d.name not in IGNORED_DIR_NAMES]
+    subdirs = [
+        d for d in parent.iterdir() if d.is_dir() and d.name not in IGNORED_DIR_NAMES
+    ]
     total = len(subdirs)
 
     for i, subdir in enumerate(sorted(subdirs), 1):
@@ -226,6 +265,9 @@ def batch_import_cases(
                 title=subdir.name,
                 tags=tags or [],
                 status=status,
+                units=units,
+                solver_version=solver_version,
+                source_mode=source_mode,
                 cases_root=cases_root,
             )
             imported.append(summary.case_id)
@@ -255,33 +297,55 @@ def find_duplicate_cases(
     """
     source = Path(source_folder).expanduser().resolve()
     source_str = str(source)
+    source_files: list[CaseFile] | None = None
+    source_fingerprint = ""
 
     duplicates: list[dict[str, Any]] = []
     for case in list_cases(cases_root):
         case_source = str(Path(case.source_folder).resolve())
         if case_source == source_str:
-            duplicates.append({
-                "case_id": case.case_id,
-                "title": case.title,
-                "source_folder": case_source,
-                "status": case.status,
-                "created_at": case.created_at,
-                "match_type": "exact_path",
-            })
+            duplicates.append(
+                {
+                    "case_id": case.case_id,
+                    "title": case.title,
+                    "source_folder": case_source,
+                    "status": case.status,
+                    "created_at": case.created_at,
+                    "match_type": "exact_path",
+                }
+            )
             continue
-        # Fuzzy: same folder name + similar file count
-        if Path(case_source).name == source.name:
-            if case.file_counts:
-                dup_file_count = sum(1 for f in source.rglob("*") if f.is_file())
-                if abs(case.file_counts.get("total", 0) - dup_file_count) <= 3:
-                    duplicates.append({
+        if case.source_fingerprint:
+            if source_files is None:
+                source_files = _scan_files(source)
+                source_fingerprint = fingerprint_case_files(source_files)
+            if source_fingerprint == case.source_fingerprint:
+                duplicates.append(
+                    {
                         "case_id": case.case_id,
                         "title": case.title,
                         "source_folder": case_source,
                         "status": case.status,
                         "created_at": case.created_at,
-                        "match_type": "fuzzy_name_size",
-                    })
+                        "match_type": "source_fingerprint",
+                    }
+                )
+                continue
+        # Fuzzy: same folder name + similar file count
+        if Path(case_source).name == source.name:
+            if case.file_counts:
+                dup_file_count = sum(1 for f in source.rglob("*") if f.is_file())
+                if abs(case.file_counts.get("total", 0) - dup_file_count) <= 3:
+                    duplicates.append(
+                        {
+                            "case_id": case.case_id,
+                            "title": case.title,
+                            "source_folder": case_source,
+                            "status": case.status,
+                            "created_at": case.created_at,
+                            "match_type": "fuzzy_name_size",
+                        }
+                    )
 
     return duplicates
 
@@ -290,8 +354,17 @@ def save_case_summary(summary: CaseSummary) -> Path:
     case_dir = Path(summary.case_dir)
     case_dir.mkdir(parents=True, exist_ok=True)
     summary.updated_at = datetime.now().isoformat(timespec="seconds")
+    summary.schema_version = CASE_PACKAGE_SCHEMA_VERSION
+    summary.units = normalize_case_units(summary.units, summary.parameters)
+    if not summary.source_fingerprint:
+        summary.source_fingerprint = fingerprint_case_files(summary.files)
+    summary.quality = evaluate_case_quality(summary)
     path = case_dir / "case_summary.json"
-    path.write_text(json.dumps(_summary_to_dict(summary), indent=2, ensure_ascii=False), encoding="utf-8")
+    path.write_text(
+        json.dumps(_summary_to_dict(summary), indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    write_case_package(summary)
     return path
 
 
@@ -326,9 +399,17 @@ def filter_cases(
     date_to: str | None = None,
 ) -> list[CaseSummary]:
     tag_terms = _normalize_filter_terms(tags)
-    status_set = {str(item).strip().lower() for item in (statuses or []) if str(item).strip()}
-    material_set = {str(item).strip().lower() for item in (material_types or []) if str(item).strip()}
-    case_type_set = {str(item).strip().lower() for item in (case_types or []) if str(item).strip()}
+    status_set = {
+        str(item).strip().lower() for item in (statuses or []) if str(item).strip()
+    }
+    material_set = {
+        str(item).strip().lower()
+        for item in (material_types or [])
+        if str(item).strip()
+    }
+    case_type_set = {
+        str(item).strip().lower() for item in (case_types or []) if str(item).strip()
+    }
     start = _date_key(date_from)
     end = _date_key(date_to)
 
@@ -347,7 +428,9 @@ def filter_cases(
             continue
         if end and updated and updated > end:
             continue
-        haystack = " ".join([case.title, case.description, case.source_folder, " ".join(case.tags)]).lower()
+        haystack = " ".join(
+            [case.title, case.description, case.source_folder, " ".join(case.tags)]
+        ).lower()
         if tag_terms and not all(term in haystack for term in tag_terms):
             continue
         result.append(case)
@@ -367,7 +450,10 @@ def infer_case_type(case: CaseSummary) -> str:
     ).lower()
     if any(term in text for term in ("composite", "rve", "fiber", "laminate", "复合")):
         return "composite"
-    if any(term in text for term in ("j2", "hill", "barlat", "steel", "metal", "plastic", "金属")):
+    if any(
+        term in text
+        for term in ("j2", "hill", "barlat", "steel", "metal", "plastic", "金属")
+    ):
         return "metal"
     return "unknown"
 
@@ -378,38 +464,37 @@ def find_similar_cases(
     cases: list[CaseSummary] | None = None,
     cases_root: Path = CASES_ROOT,
     top_k: int = 5,
+    weights: dict[str, float] | None = None,
 ) -> list[dict[str, Any]]:
-    """Rank archived cases by simple normalized numeric feature distance."""
+    """Rank archived cases with explainable hybrid engineering similarity."""
 
     query_case = query if isinstance(query, CaseSummary) else load_case_summary(query)
-    candidates = [case for case in (cases or list_cases(cases_root)) if case.case_id != query_case.case_id]
+    candidates = [
+        case
+        for case in (cases or list_cases(cases_root))
+        if case.case_id != query_case.case_id
+    ]
     if not candidates:
         return []
-    query_vector = _case_similarity_vector(query_case)
-    candidate_vectors = [_case_similarity_vector(case) for case in candidates]
-    scales = _feature_scales([query_vector, *candidate_vectors])
-    rows = []
-    for case, vector in zip(candidates, candidate_vectors):
-        distance = _normalized_distance(query_vector, vector, scales)
-        rows.append(
-            {
-                "case_id": case.case_id,
-                "title": case.title,
-                "status": case.status,
-                "tags": ", ".join(case.tags),
-                "distance": distance,
-                "similarity": 1.0 / (1.0 + distance),
-                "case_dir": case.case_dir,
-            }
-        )
-    return sorted(rows, key=lambda item: item["distance"])[: max(1, int(top_k))]
+    return rank_similar_cases(
+        query_case,
+        candidates,
+        top_k=top_k,
+        weights=weights,
+    )
 
 
 def load_case_summary(case_dir: Path | str) -> CaseSummary:
     path = Path(case_dir)
-    summary_path = path if path.name == "case_summary.json" else path / "case_summary.json"
+    summary_path = (
+        path if path.name == "case_summary.json" else path / "case_summary.json"
+    )
     data = json.loads(summary_path.read_text(encoding="utf-8"))
-    files = [_case_file_from_dict(item) for item in data.get("files", []) if isinstance(item, dict)]
+    files = [
+        _case_file_from_dict(item)
+        for item in data.get("files", [])
+        if isinstance(item, dict)
+    ]
     data["files"] = files
     known = {item.name for item in dataclass_fields(CaseSummary)}
     unknown = sorted(set(data) - known)
@@ -425,11 +510,15 @@ def load_case_summary(case_dir: Path | str) -> CaseSummary:
 def case_table_rows(cases: list[CaseSummary]) -> list[dict[str, Any]]:
     rows = []
     for case in cases:
+        quality = case.quality or evaluate_case_quality(case)
         rows.append(
             {
                 "case": case.case_id,
                 "标题": case.title,
-                "状态": case.status,
+                "人工状态": case.status,
+                "执行状态": quality.get("execution_state", "unknown"),
+                "质量分": quality.get("score", 0),
+                "可训练": "是" if quality.get("training_eligible") else "否",
                 "标签": ", ".join(case.tags),
                 "文件数": len(case.files),
                 "ODB": case.file_counts.get("result", 0),
@@ -442,7 +531,9 @@ def case_table_rows(cases: list[CaseSummary]) -> list[dict[str, Any]]:
     return rows
 
 
-def file_table_rows(summary: CaseSummary, category: str | None = None) -> list[dict[str, Any]]:
+def file_table_rows(
+    summary: CaseSummary, category: str | None = None
+) -> list[dict[str, Any]]:
     files = summary.files
     if category and category != "all":
         files = [item for item in files if item.category == category]
@@ -485,7 +576,12 @@ def result_feature_table_rows(summary: CaseSummary) -> list[dict[str, Any]]:
     rows = []
     for item in features.get("csv_files", []):
         signals = []
-        for label, key in (("Max Mises", "max_mises"), ("Max PEEQ", "max_peeq"), ("Max U", "max_displacement"), ("Max RF", "max_reaction_force")):
+        for label, key in (
+            ("Max Mises", "max_mises"),
+            ("Max PEEQ", "max_peeq"),
+            ("Max U", "max_displacement"),
+            ("Max RF", "max_reaction_force"),
+        ):
             value = item.get("signals", {}).get(key)
             if value is not None:
                 signals.append(f"{label}={value:.6g}")
@@ -561,14 +657,24 @@ def odb_frame_series_table_rows(summary: CaseSummary) -> list[dict[str, Any]]:
     return rows
 
 
-def append_odb_extraction(summary: CaseSummary, extraction: dict[str, Any]) -> CaseSummary:
+def append_odb_extraction(
+    summary: CaseSummary, extraction: dict[str, Any]
+) -> CaseSummary:
     summary.odb_extractions.append(extraction)
+    aggregate = extraction.get("aggregate", {}) if isinstance(extraction, dict) else {}
+    if isinstance(aggregate, dict):
+        for key in ("max_mises", "max_peeq", "max_displacement", "max_reaction_force"):
+            value = aggregate.get(key)
+            if isinstance(value, (int, float)):
+                summary.abaqus_results[key] = float(value)
     save_case_summary(summary)
     write_case_report(summary)
     return summary
 
 
-def append_odb_frame_series(summary: CaseSummary, series: dict[str, Any]) -> CaseSummary:
+def append_odb_frame_series(
+    summary: CaseSummary, series: dict[str, Any]
+) -> CaseSummary:
     summary.odb_frame_series.append(series)
     save_case_summary(summary)
     write_case_report(summary)
@@ -599,7 +705,9 @@ def _scan_files(source: Path) -> list[CaseFile]:
     for path in sorted(source.rglob("*")):
         if not path.is_file():
             continue
-        if any(part in IGNORED_DIR_NAMES for part in path.relative_to(source).parts[:-1]):
+        if any(
+            part in IGNORED_DIR_NAMES for part in path.relative_to(source).parts[:-1]
+        ):
             continue
         try:
             stat = path.stat()
@@ -612,6 +720,7 @@ def _scan_files(source: Path) -> list[CaseFile]:
 def _case_file_from_path(path: Path, root: Path) -> CaseFile:
     stat = path.stat()
     suffix = path.suffix.lower()
+    fingerprint, fingerprint_mode = fingerprint_file(path, int(stat.st_size))
     return CaseFile(
         path=str(path.resolve()),
         relative_path=str(path.relative_to(root)),
@@ -620,6 +729,8 @@ def _case_file_from_path(path: Path, root: Path) -> CaseFile:
         category=_categorize_extension(suffix),
         size_bytes=int(stat.st_size),
         modified_at=datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
+        fingerprint=fingerprint,
+        fingerprint_mode=fingerprint_mode,
     )
 
 
@@ -654,16 +765,36 @@ def _extract_inp_features(files: list[CaseFile]) -> dict[str, Any]:
 
     summary = {
         "inp_file_count": len(parsed),
-        "estimated_node_count": sum(int(item.get("estimated_node_count", 0)) for item in parsed),
-        "estimated_element_count": sum(int(item.get("estimated_element_count", 0)) for item in parsed),
-        "materials": _unique_sorted(value for item in parsed for value in item.get("materials", [])),
-        "steps": _unique_sorted(value for item in parsed for value in item.get("steps", [])),
-        "element_types": _unique_sorted(value for item in parsed for value in item.get("element_types", [])),
-        "load_keywords": _unique_sorted(value for item in parsed for value in item.get("load_keywords", [])),
-        "boundary_keywords": _unique_sorted(value for item in parsed for value in item.get("boundary_keywords", [])),
-        "interaction_keywords": _unique_sorted(value for item in parsed for value in item.get("interaction_keywords", [])),
-        "output_keywords": _unique_sorted(value for item in parsed for value in item.get("output_keywords", [])),
-        "include_files": _unique_sorted(value for item in parsed for value in item.get("include_files", [])),
+        "estimated_node_count": sum(
+            int(item.get("estimated_node_count", 0)) for item in parsed
+        ),
+        "estimated_element_count": sum(
+            int(item.get("estimated_element_count", 0)) for item in parsed
+        ),
+        "materials": _unique_sorted(
+            value for item in parsed for value in item.get("materials", [])
+        ),
+        "steps": _unique_sorted(
+            value for item in parsed for value in item.get("steps", [])
+        ),
+        "element_types": _unique_sorted(
+            value for item in parsed for value in item.get("element_types", [])
+        ),
+        "load_keywords": _unique_sorted(
+            value for item in parsed for value in item.get("load_keywords", [])
+        ),
+        "boundary_keywords": _unique_sorted(
+            value for item in parsed for value in item.get("boundary_keywords", [])
+        ),
+        "interaction_keywords": _unique_sorted(
+            value for item in parsed for value in item.get("interaction_keywords", [])
+        ),
+        "output_keywords": _unique_sorted(
+            value for item in parsed for value in item.get("output_keywords", [])
+        ),
+        "include_files": _unique_sorted(
+            value for item in parsed for value in item.get("include_files", [])
+        ),
         "parse_error_count": sum(1 for item in parsed if item.get("parse_error")),
     }
     return {"summary": summary, "files": parsed}
@@ -675,7 +806,9 @@ def _extract_result_features(files: list[CaseFile]) -> dict[str, Any]:
         if item.extension != ".csv":
             continue
         try:
-            csv_files.append(_parse_csv_result_file(Path(item.path), item.relative_path))
+            csv_files.append(
+                _parse_csv_result_file(Path(item.path), item.relative_path)
+            )
         except Exception as exc:
             csv_files.append(
                 {
@@ -705,7 +838,9 @@ def _extract_result_features(files: list[CaseFile]) -> dict[str, Any]:
         if item.extension not in TEXT_RESULT_EXTENSIONS:
             continue
         try:
-            log_files.append(_parse_text_result_file(Path(item.path), item.relative_path))
+            log_files.append(
+                _parse_text_result_file(Path(item.path), item.relative_path)
+            )
         except Exception as exc:
             log_files.append(
                 {
@@ -732,16 +867,23 @@ def _extract_result_features(files: list[CaseFile]) -> dict[str, Any]:
         "error_count": sum(int(item.get("error_count", 0)) for item in log_files),
         "max_mises": _max_optional(signal.get("max_mises") for signal in signals),
         "max_peeq": _max_optional(signal.get("max_peeq") for signal in signals),
-        "max_displacement": _max_optional(signal.get("max_displacement") for signal in signals),
-        "max_reaction_force": _max_optional(signal.get("max_reaction_force") for signal in signals),
+        "max_displacement": _max_optional(
+            signal.get("max_displacement") for signal in signals
+        ),
+        "max_reaction_force": _max_optional(
+            signal.get("max_reaction_force") for signal in signals
+        ),
         "odb_files": [item["path"] for item in odb_files],
         "parse_error_count": sum(
-            1
-            for item in [*csv_files, *log_files]
-            if item.get("parse_error")
+            1 for item in [*csv_files, *log_files] if item.get("parse_error")
         ),
     }
-    return {"summary": summary, "csv_files": csv_files, "odb_files": odb_files, "log_files": log_files}
+    return {
+        "summary": summary,
+        "csv_files": csv_files,
+        "odb_files": odb_files,
+        "log_files": log_files,
+    }
 
 
 def _parse_csv_result_file(path: Path, relative_path: str) -> dict[str, Any]:
@@ -764,7 +906,9 @@ def _parse_csv_result_file(path: Path, relative_path: str) -> dict[str, Any]:
                 key = column.strip()
                 if not key:
                     continue
-                item = stats.setdefault(key, {"count": 0.0, "min": value, "max": value, "sum": 0.0})
+                item = stats.setdefault(
+                    key, {"count": 0.0, "min": value, "max": value, "sum": 0.0}
+                )
                 item["count"] += 1.0
                 item["min"] = min(item["min"], value)
                 item["max"] = max(item["max"], value)
@@ -795,13 +939,16 @@ def _parse_csv_result_file(path: Path, relative_path: str) -> dict[str, Any]:
     }
 
 
-def _parse_text_result_file(path: Path, relative_path: str, max_lines: int = 100_000) -> dict[str, Any]:
+def _parse_text_result_file(
+    path: Path, relative_path: str, max_lines: int = 100_000
+) -> dict[str, Any]:
     warning_count = 0
     error_count = 0
     completed = False
     aborted = False
     truncated = False
     line_count = 0
+    fatal_lines: list[str] = []
     with path.open("r", encoding="utf-8", errors="ignore") as handle:
         for line_count, line in enumerate(handle, start=1):
             if line_count > max_lines:
@@ -810,11 +957,12 @@ def _parse_text_result_file(path: Path, relative_path: str, max_lines: int = 100
             lower = line.lower()
             if "warning" in lower:
                 warning_count += 1
-            if "error" in lower or "exception" in lower:
+            if _is_fatal_solver_line(line):
                 error_count += 1
-            if "aborted" in lower or "terminated" in lower:
                 aborted = True
-            if "completed" in lower or "successfully" in lower:
+                if len(fatal_lines) < 5:
+                    fatal_lines.append(line.strip()[:500])
+            if _is_solver_completion_line(line):
                 completed = True
 
     if aborted or error_count:
@@ -833,8 +981,41 @@ def _parse_text_result_file(path: Path, relative_path: str, max_lines: int = 100
         "warning_count": warning_count,
         "error_count": error_count,
         "status_hint": status_hint,
+        "fatal_lines": fatal_lines,
         "truncated": truncated,
     }
+
+
+def _is_fatal_solver_line(line: str) -> bool:
+    compact = " ".join(line.strip().lower().split())
+    return any(
+        pattern in compact
+        for pattern in (
+            "***error",
+            "error in job",
+            "abaqus error:",
+            "analysis has been terminated",
+            "analysis has been aborted",
+            "job aborted",
+            "is aborted",
+            "exited with an error",
+            "fatal exception",
+            "traceback (most recent call last)",
+        )
+    ) or compact.startswith("error:")
+
+
+def _is_solver_completion_line(line: str) -> bool:
+    compact = " ".join(line.strip().lower().split())
+    return any(
+        pattern in compact
+        for pattern in (
+            "the analysis has completed successfully",
+            "analysis completed successfully",
+            "analysis complete",
+            "job completed successfully",
+        )
+    )
 
 
 def _guess_delimiter(sample: str) -> str:
@@ -875,15 +1056,27 @@ def _case_file_from_dict(data: dict[str, Any]) -> CaseFile:
 
 
 def _signals_from_csv(item: dict[str, Any]) -> dict[str, float | None]:
-    return item.get("signals") or _signals_from_numeric_columns(item.get("numeric_columns", []))
+    return item.get("signals") or _signals_from_numeric_columns(
+        item.get("numeric_columns", [])
+    )
 
 
-def _signals_from_numeric_columns(numeric_columns: list[dict[str, Any]]) -> dict[str, float | None]:
+def _signals_from_numeric_columns(
+    numeric_columns: list[dict[str, Any]],
+) -> dict[str, float | None]:
     return {
-        "max_mises": _metric_from_columns(numeric_columns, ("mises", "von_mises", "s_mises")),
-        "max_peeq": _metric_from_columns(numeric_columns, ("peeq", "eqps", "plastic_strain")),
-        "max_displacement": _metric_from_columns(numeric_columns, ("umag", "displacement", "disp", "u_"), use_abs=True),
-        "max_reaction_force": _metric_from_columns(numeric_columns, ("rf", "reaction"), use_abs=True),
+        "max_mises": _metric_from_columns(
+            numeric_columns, ("mises", "von_mises", "s_mises")
+        ),
+        "max_peeq": _metric_from_columns(
+            numeric_columns, ("peeq", "eqps", "plastic_strain")
+        ),
+        "max_displacement": _metric_from_columns(
+            numeric_columns, ("umag", "displacement", "disp", "u_"), use_abs=True
+        ),
+        "max_reaction_force": _metric_from_columns(
+            numeric_columns, ("rf", "reaction"), use_abs=True
+        ),
     }
 
 
@@ -908,56 +1101,12 @@ def _metric_from_columns(
     return max(values) if values else None
 
 
-def _case_similarity_vector(case: CaseSummary) -> dict[str, float]:
-    inp_summary = (case.inp_features or {}).get("summary", {})
-    result_summary = (case.result_features or {}).get("summary", {})
-    params = case.parameters or {}
-    geometry = case.geometry or {}
-    loading = case.loading or {}
-    return {
-        "file_count": float(len(case.files)),
-        "model_file_count": float(case.file_counts.get("model", 0)),
-        "result_file_count": float(case.file_counts.get("result", 0)),
-        "inp_node_count": float(inp_summary.get("estimated_node_count", 0) or 0),
-        "inp_element_count": float(inp_summary.get("estimated_element_count", 0) or 0),
-        "csv_row_count": float(result_summary.get("csv_row_count", 0) or 0),
-        "max_mises": float(result_summary.get("max_mises", 0) or 0),
-        "max_peeq": float(result_summary.get("max_peeq", 0) or 0),
-        "yield_strength": _float_or_zero(params.get("yield_strength", loading.get("yield_strength"))),
-        "youngs_modulus": _float_or_zero(params.get("youngs_modulus")),
-        "poisson_ratio": _float_or_zero(params.get("poisson_ratio")),
-        "fiber_volume_fraction": _float_or_zero(params.get("fiber_volume_fraction", geometry.get("fiber_volume_fraction"))),
-        "hole_radius": _float_or_zero(params.get("hole_radius", geometry.get("hole_radius"))),
-    }
-
-
-def _feature_scales(vectors: list[dict[str, float]]) -> dict[str, float]:
-    scales: dict[str, float] = {}
-    for key in SIMILARITY_FEATURE_KEYS:
-        values = [abs(float(vector.get(key, 0.0))) for vector in vectors]
-        scales[key] = max(max(values), 1.0)
-    return scales
-
-
 def _case_material_type(case: CaseSummary) -> str:
-    return str(case.material_type or (case.parameters or {}).get("material_type", "")).strip().lower()
-
-
-def _normalized_distance(left: dict[str, float], right: dict[str, float], scales: dict[str, float]) -> float:
-    total = 0.0
-    used = 0
-    for key in SIMILARITY_FEATURE_KEYS:
-        scale = scales.get(key, 1.0) or 1.0
-        total += ((left.get(key, 0.0) - right.get(key, 0.0)) / scale) ** 2
-        used += 1
-    return float((total / max(1, used)) ** 0.5)
-
-
-def _float_or_zero(value: Any) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
+    return (
+        str(case.material_type or (case.parameters or {}).get("material_type", ""))
+        .strip()
+        .lower()
+    )
 
 
 def _max_optional(values: Any) -> float | None:
@@ -1101,7 +1250,9 @@ def _file_counts(files: list[CaseFile]) -> dict[str, int]:
 
 
 def _key_files(files: list[CaseFile]) -> dict[str, list[str]]:
-    keys: dict[str, list[str]] = {key: [] for key in ("model", "result", "data", "image", "report", "script")}
+    keys: dict[str, list[str]] = {
+        key: [] for key in ("model", "result", "data", "image", "report", "script")
+    }
     for item in files:
         if item.category in keys:
             keys[item.category].append(item.relative_path)
@@ -1143,7 +1294,9 @@ def _date_key(value: Any) -> str:
 
 
 def _case_id(title: str) -> str:
-    safe = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in title.strip())
+    safe = "".join(
+        ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in title.strip()
+    )
     safe = "_".join(part for part in safe.split("_") if part)
     safe = safe or "abaqus_case"
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1208,7 +1361,9 @@ def _extract_mesh_stats(inp_features: dict[str, Any]) -> dict[str, int]:
 
 def _extract_abaqus_results(result_features: dict[str, Any]) -> dict[str, float]:
     """Extract key Abaqus result values."""
-    summary = result_features.get("summary", {}) if isinstance(result_features, dict) else {}
+    summary = (
+        result_features.get("summary", {}) if isinstance(result_features, dict) else {}
+    )
     results: dict[str, float] = {}
     for key in ("max_mises", "max_peeq", "max_displacement", "max_reaction_force"):
         val = summary.get(key)
@@ -1220,12 +1375,22 @@ def _extract_abaqus_results(result_features: dict[str, Any]) -> dict[str, float]
     return results
 
 
-def _extract_odb_features_from_results(result_features: dict[str, Any]) -> dict[str, float]:
+def _extract_odb_features_from_results(
+    result_features: dict[str, Any],
+) -> dict[str, float]:
     """Extract ODB feature summary."""
-    summary = result_features.get("summary", {}) if isinstance(result_features, dict) else {}
+    summary = (
+        result_features.get("summary", {}) if isinstance(result_features, dict) else {}
+    )
     feats: dict[str, float] = {}
-    for key in ("odb_file_count", "csv_file_count", "log_file_count", "csv_row_count",
-                "warning_count", "error_count"):
+    for key in (
+        "odb_file_count",
+        "csv_file_count",
+        "log_file_count",
+        "csv_row_count",
+        "warning_count",
+        "error_count",
+    ):
         val = summary.get(key)
         if val is not None:
             try:
@@ -1254,7 +1419,9 @@ def _infer_material_type(
             return "hill"
         if "j2" in mat_names:
             return "j2"
-        if any(term in mat_names for term in ("steel", "aluminum", "aluminium", "metal")):
+        if any(
+            term in mat_names for term in ("steel", "aluminum", "aluminium", "metal")
+        ):
             return "metal"
     return "unknown"
 
@@ -1282,7 +1449,10 @@ def _summary_to_dict(summary: CaseSummary) -> dict[str, Any]:
 
 
 def _markdown_report(summary: CaseSummary) -> str:
-    counts = "\n".join(f"- {key}: {value}" for key, value in summary.file_counts.items()) or "- 暂无文件"
+    counts = (
+        "\n".join(f"- {key}: {value}" for key, value in summary.file_counts.items())
+        or "- 暂无文件"
+    )
     tags = ", ".join(summary.tags) if summary.tags else "未标注"
     inp_section = _inp_features_markdown(summary)
     result_section = _result_features_markdown(summary)
