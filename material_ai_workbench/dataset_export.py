@@ -9,7 +9,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from material_ai_workbench.case_library import CASES_ROOT, CaseSummary, infer_case_type, list_cases, load_case_summary
+from material_ai_workbench.case_library import (
+    CASES_ROOT,
+    CaseSummary,
+    infer_case_type,
+    list_cases,
+    load_case_summary,
+)
+from material_ai_workbench.case_package import evaluate_case_quality
 from material_ai_workbench.config import DATASETS_ROOT
 
 
@@ -23,6 +30,8 @@ class DatasetExport:
     case_count: int
     row_count: int
     frame_series_count: int
+    source_case_count: int
+    skipped_case_count: int
 
 
 def export_case_dataset(
@@ -31,10 +40,33 @@ def export_case_dataset(
     output_root: Path = DATASETS_ROOT,
     name: str = "case_dataset",
     case_dirs: list[Path | str] | tuple[Path | str, ...] | None = None,
+    training_only: bool = False,
 ) -> DatasetExport:
     """Export case-library features into CSV assets for ML experiments."""
 
-    cases = _selected_cases(cases_root=cases_root, case_dirs=case_dirs)
+    source_cases = _selected_cases(cases_root=cases_root, case_dirs=case_dirs)
+    quality_by_case = {
+        case.case_id: case.quality or evaluate_case_quality(case)
+        for case in source_cases
+    }
+    skipped_cases = [
+        {
+            "case_id": case.case_id,
+            "title": case.title,
+            "blocking_reasons": quality_by_case[case.case_id].get(
+                "blocking_reasons", []
+            ),
+        }
+        for case in source_cases
+        if training_only
+        and not quality_by_case[case.case_id].get("training_eligible", False)
+    ]
+    cases = [
+        case
+        for case in source_cases
+        if not training_only
+        or quality_by_case[case.case_id].get("training_eligible", False)
+    ]
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_name = _safe_name(name)
     export_dir = output_root / f"{stamp}_{safe_name}"
@@ -52,6 +84,10 @@ def export_case_dataset(
     manifest = {
         "created_at": datetime.now().isoformat(timespec="seconds"),
         "cases_root": str(cases_root),
+        "training_only": training_only,
+        "source_case_count": len(source_cases),
+        "skipped_case_count": len(skipped_cases),
+        "skipped_cases": skipped_cases,
         "case_dirs": [str(case.case_dir) for case in cases],
         "case_count": len(cases),
         "row_count": len(dataset_rows),
@@ -63,7 +99,9 @@ def export_case_dataset(
             "frame_series_index": FRAME_SERIES_COLUMNS,
         },
     }
-    manifest_json.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+    manifest_json.write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     report_md.write_text(_dataset_report(manifest), encoding="utf-8")
     return DatasetExport(
         export_dir=export_dir,
@@ -74,13 +112,25 @@ def export_case_dataset(
         case_count=len(cases),
         row_count=len(dataset_rows),
         frame_series_count=len(frame_rows),
+        source_case_count=len(source_cases),
+        skipped_case_count=len(skipped_cases),
     )
 
 
 CASE_DATASET_COLUMNS = [
     "case_id",
+    "case_schema_version",
+    "source_fingerprint",
     "title",
     "status",
+    "unit_system",
+    "unit_length",
+    "unit_stress",
+    "quality_status",
+    "quality_score",
+    "execution_state",
+    "training_eligible",
+    "quality_blocking_reasons",
     "tags",
     "batch_sample_id",
     "material_type",
@@ -168,10 +218,22 @@ def _case_dataset_row(case: CaseSummary) -> dict[str, Any]:
     abaqus_results = case.abaqus_results or {}
     odb_features = case.odb_features or {}
     material_type = case.material_type or params.get("material_type", "")
+    quality = case.quality or evaluate_case_quality(case)
+    units = case.units or {}
     return {
         "case_id": case.case_id,
+        "case_schema_version": case.schema_version,
+        "source_fingerprint": case.source_fingerprint,
         "title": case.title,
         "status": case.status,
+        "unit_system": units.get("system", ""),
+        "unit_length": units.get("length", ""),
+        "unit_stress": units.get("stress", ""),
+        "quality_status": quality.get("status", ""),
+        "quality_score": quality.get("score", 0),
+        "execution_state": quality.get("execution_state", "unknown"),
+        "training_eligible": quality.get("training_eligible", False),
+        "quality_blocking_reasons": ";".join(quality.get("blocking_reasons", [])),
         "tags": ";".join(case.tags),
         "batch_sample_id": params.get("batch_sample_id", ""),
         "material_type": material_type,
@@ -179,13 +241,25 @@ def _case_dataset_row(case: CaseSummary) -> dict[str, Any]:
         "geometry_length": geometry.get("length", params.get("length", "")),
         "geometry_width": geometry.get("width", params.get("width", "")),
         "geometry_thickness": geometry.get("thickness", params.get("thickness", "")),
-        "geometry_hole_radius": geometry.get("hole_radius", params.get("hole_radius", "")),
-        "fiber_volume_fraction": geometry.get("fiber_volume_fraction", params.get("fiber_volume_fraction", "")),
-        "loading_applied_strain": loading.get("applied_strain", params.get("applied_strain", "")),
-        "loading_applied_stress": loading.get("applied_stress", params.get("applied_stress", "")),
+        "geometry_hole_radius": geometry.get(
+            "hole_radius", params.get("hole_radius", "")
+        ),
+        "fiber_volume_fraction": geometry.get(
+            "fiber_volume_fraction", params.get("fiber_volume_fraction", "")
+        ),
+        "loading_applied_strain": loading.get(
+            "applied_strain", params.get("applied_strain", "")
+        ),
+        "loading_applied_stress": loading.get(
+            "applied_stress", params.get("applied_stress", "")
+        ),
         "loading_type": loading.get("load_type", params.get("load_type", "")),
-        "mesh_node_count": mesh_stats.get("node_count", inp.get("estimated_node_count", 0)),
-        "mesh_element_count": mesh_stats.get("element_count", inp.get("estimated_element_count", 0)),
+        "mesh_node_count": mesh_stats.get(
+            "node_count", inp.get("estimated_node_count", 0)
+        ),
+        "mesh_element_count": mesh_stats.get(
+            "element_count", inp.get("estimated_element_count", 0)
+        ),
         "yield_strength": params.get("yield_strength", ""),
         "youngs_modulus": params.get("youngs_modulus", ""),
         "poisson_ratio": params.get("poisson_ratio", ""),
@@ -209,8 +283,16 @@ def _case_dataset_row(case: CaseSummary) -> dict[str, Any]:
         "result_max_peeq": result.get("max_peeq"),
         "result_max_displacement": result.get("max_displacement"),
         "result_max_reaction_force": result.get("max_reaction_force"),
-        "abaqus_max_mises": _first_present(abaqus_results.get("max_mises"), result.get("max_mises"), latest_aggregate.get("max_mises")),
-        "abaqus_max_peeq": _first_present(abaqus_results.get("max_peeq"), result.get("max_peeq"), latest_aggregate.get("max_peeq")),
+        "abaqus_max_mises": _first_present(
+            abaqus_results.get("max_mises"),
+            result.get("max_mises"),
+            latest_aggregate.get("max_mises"),
+        ),
+        "abaqus_max_peeq": _first_present(
+            abaqus_results.get("max_peeq"),
+            result.get("max_peeq"),
+            latest_aggregate.get("max_peeq"),
+        ),
         "abaqus_max_displacement": _first_present(
             abaqus_results.get("max_displacement"),
             result.get("max_displacement"),
@@ -221,10 +303,18 @@ def _case_dataset_row(case: CaseSummary) -> dict[str, Any]:
             result.get("max_reaction_force"),
             latest_aggregate.get("max_reaction_force"),
         ),
-        "odb_csv_file_count": odb_features.get("csv_file_count", result.get("csv_file_count", 0)),
-        "odb_log_file_count": odb_features.get("log_file_count", result.get("log_file_count", 0)),
-        "odb_warning_count": odb_features.get("warning_count", result.get("warning_count", 0)),
-        "odb_error_count": odb_features.get("error_count", result.get("error_count", 0)),
+        "odb_csv_file_count": odb_features.get(
+            "csv_file_count", result.get("csv_file_count", 0)
+        ),
+        "odb_log_file_count": odb_features.get(
+            "log_file_count", result.get("log_file_count", 0)
+        ),
+        "odb_warning_count": odb_features.get(
+            "warning_count", result.get("warning_count", 0)
+        ),
+        "odb_error_count": odb_features.get(
+            "error_count", result.get("error_count", 0)
+        ),
         "odb_extraction_count": len(case.odb_extractions),
         "latest_odb_max_mises": latest_aggregate.get("max_mises"),
         "latest_odb_max_peeq": latest_aggregate.get("max_peeq"),
@@ -308,7 +398,10 @@ def _dataset_report(manifest: dict[str, Any]) -> str:
 ## 基本信息
 
 - 创建时间: `{manifest.get("created_at")}`
-- 案例数: `{manifest.get("case_count")}`
+- 仅导出训练合格案例: `{manifest.get("training_only")}`
+- 候选案例数: `{manifest.get("source_case_count")}`
+- 实际导出案例数: `{manifest.get("case_count")}`
+- 质量门排除案例数: `{manifest.get("skipped_case_count")}`
 - 主表行数: `{manifest.get("row_count")}`
 - 帧曲线索引数: `{manifest.get("frame_series_count")}`
 - 主表: `{manifest.get("dataset_csv")}`
@@ -316,24 +409,52 @@ def _dataset_report(manifest: dict[str, Any]) -> str:
 
 ## 用途
 
-`case_dataset.csv` 用于把 INP 输入特征、日志状态、CSV/ODB 关键结果汇总成机器学习样本索引。
-
-`frame_series_index.csv` 用于指向每个 ODB 的逐帧曲线 CSV，后续可以据此构建时间序列代理模型或结果趋势预测模型。
+`case_dataset.csv` 汇总 INP 输入特征、显式单位、求解证据、CSV/ODB 结果和数据血缘。
+`frame_series_index.csv` 指向每个 ODB 的逐帧曲线，可用于时序代理模型或结果趋势预测。
+训练前应检查 `training_eligible`；被排除案例及原因保存在 `dataset_manifest.json`。
 """
 
 
 def _safe_name(value: str) -> str:
-    return "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in value).strip("_") or "dataset"
+    return (
+        "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in value).strip(
+            "_"
+        )
+        or "dataset"
+    )
 
 
 # -- Dataset governance: train/validation split with lineage tracking --
 
 RESULT_COLUMNS = {
-    "abaqus_max_mises", "abaqus_max_peeq", "abaqus_max_displacement", "abaqus_max_reaction_force",
-    "latest_odb_max_mises", "latest_odb_max_peeq", "latest_odb_max_displacement", "latest_odb_max_reaction_force",
-    "result_max_mises", "result_max_peeq", "result_max_displacement", "result_max_reaction_force",
+    "abaqus_max_mises",
+    "abaqus_max_peeq",
+    "abaqus_max_displacement",
+    "abaqus_max_reaction_force",
+    "latest_odb_max_mises",
+    "latest_odb_max_peeq",
+    "latest_odb_max_displacement",
+    "latest_odb_max_reaction_force",
+    "result_max_mises",
+    "result_max_peeq",
+    "result_max_displacement",
+    "result_max_reaction_force",
 }
 IDENTIFIER_COLUMNS_DS = {"case_id", "title", "source_folder", "batch_sample_id"}
+GOVERNANCE_COLUMNS_DS = {
+    "case_schema_version",
+    "source_fingerprint",
+    "status",
+    "unit_system",
+    "unit_length",
+    "unit_stress",
+    "quality_status",
+    "quality_score",
+    "execution_state",
+    "training_eligible",
+    "quality_blocking_reasons",
+    "updated_at",
+}
 
 
 def create_dataset_split(
@@ -349,12 +470,16 @@ def create_dataset_split(
     and lineage tracing back to source cases.
     """
     import random
+
     random.seed(random_seed)
 
     csv_path = Path(dataset_csv)
     rows = _read_csv_rows(csv_path)
     if len(rows) < 2:
-        return {"error": "Need at least 2 cases for a split.", "csv_path": str(csv_path)}
+        return {
+            "error": "Need at least 2 cases for a split.",
+            "csv_path": str(csv_path),
+        }
 
     case_ids = [r.get("case_id", str(i)) for i, r in enumerate(rows)]
     n_test = max(1, int(len(rows) * test_fraction))
@@ -372,9 +497,13 @@ def create_dataset_split(
     for col in all_columns:
         if col in IDENTIFIER_COLUMNS_DS:
             skipped_columns.append({"column": col, "reason": "identifier"})
+        elif col in GOVERNANCE_COLUMNS_DS:
+            skipped_columns.append({"column": col, "reason": "governance_metadata"})
         elif col in RESULT_COLUMNS:
             target_columns.append(col)
-        elif any(col.startswith(prefix) for prefix in ("abaqus_", "latest_odb_", "result_")):
+        elif any(
+            col.startswith(prefix) for prefix in ("abaqus_", "latest_odb_", "result_")
+        ):
             target_columns.append(col)
         else:
             feature_columns.append(col)
@@ -382,8 +511,13 @@ def create_dataset_split(
     # Check for potential leakage (feature columns that contain result data)
     leakage_warnings = []
     for col in feature_columns:
-        if any(leak in col.lower() for leak in ("mises", "peeq", "displacement", "reaction", "stress", "force")):
-            leakage_warnings.append(f"Potential leakage: '{col}' is classified as a feature but may contain result data.")
+        if any(
+            leak in col.lower()
+            for leak in ("mises", "peeq", "displacement", "reaction", "stress", "force")
+        ):
+            leakage_warnings.append(
+                f"Potential leakage: '{col}' is classified as a feature but may contain result data."
+            )
 
     # Build split manifest
     out = output_dir or csv_path.parent
@@ -417,7 +551,9 @@ def create_dataset_split(
     }
 
     manifest_path = out / "split_manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     return manifest
 
 

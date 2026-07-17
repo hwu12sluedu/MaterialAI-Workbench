@@ -4,10 +4,10 @@
 
 ## 统计
 
-- 模块数：44
-- 顶层公开函数：198
-- 公开类：56
-- 公开类方法：88
+- 模块数：49
+- 顶层公开函数：222
+- 公开类：59
+- 公开类方法：89
 
 ## 使用方式
 
@@ -374,24 +374,68 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 
 | 函数 | 行号 | 说明 |
 |---|---:|---|
-| `create_parameter_sweep_plan(*, name: str = 'batch_j2_sweep', material_type: str = 'j2', yield_strengths: list[float] \| tuple[float, ...] = DEFAULT_YIELD_STRENGTHS, youngs_modulus: float = 200000.0, poisson_ratio: float = 0.3, hill_ratios: tuple[float, float, float, float, float, float] = DEFAULT_HILL_RATIOS, c_value: float = 1.0, gamma: float = 1.0, n_load_cases: int = 32, n_sequence: int = 3, test_size: int = 60, plot_mesh: int = 40, max_abaqus_load_cases: int = 1, output_root: Path = BATCH_ROOT)` | 57 | Create a small batch plan for material-parameter sample expansion. |
-| `load_batch_plan(plan_dir: Path \| str)` | 128 | Load a batch plan folder or batch_plan.json file. |
-| `save_batch_plan(plan: BatchPlan)` | 137 | 待补充 |
-| `list_batch_plans(root: Path = BATCH_ROOT)` | 147 | Return batch plan folders, newest first. |
-| `run_batch_plan(plan_dir: Path \| str, *, run_abaqus: bool = False, archive_cases: bool = False, postprocess_odb: bool = False, export_dataset_after: bool = False, train_surrogate_after: bool = False, max_samples: int \| None = None, timeout_seconds: int = 1800)` | 156 | Run pending/failed samples in a batch plan. |
-| `batch_sample_table_rows(plan: BatchPlan \| dict[str, Any])` | 212 | Return compact rows for Streamlit and reports. |
-| `summarize_batch_with_llm(batch_dir: Path \| str)` | 493 | Generate an optional LLM summary for a batch plan. |
+| `create_parameter_sweep_plan(*, name: str = 'batch_j2_sweep', material_type: str = 'j2', yield_strengths: list[float] \| tuple[float, ...] = DEFAULT_YIELD_STRENGTHS, youngs_modulus: float = 200000.0, poisson_ratio: float = 0.3, hill_ratios: tuple[float, float, float, float, float, float] = DEFAULT_HILL_RATIOS, c_value: float = 1.0, gamma: float = 1.0, n_load_cases: int = 32, n_sequence: int = 3, test_size: int = 60, plot_mesh: int = 40, max_abaqus_load_cases: int = 1, output_root: Path = BATCH_ROOT)` | 73 | Create a small batch plan for material-parameter sample expansion. |
+| `load_batch_plan(plan_dir: Path \| str)` | 144 | Load a batch plan folder or batch_plan.json file. |
+| `save_batch_plan(plan: BatchPlan)` | 153 | 待补充 |
+| `list_batch_plans(root: Path = BATCH_ROOT)` | 165 | Return batch plan folders, newest first. |
+| `run_batch_plan(plan_dir: Path \| str, *, run_abaqus: bool = False, archive_cases: bool = False, postprocess_odb: bool = False, export_dataset_after: bool = False, train_surrogate_after: bool = False, max_samples: int \| None = None, timeout_seconds: int = 1800)` | 178 | Run pending/failed samples in a batch plan. |
+| `batch_sample_table_rows(plan: BatchPlan \| dict[str, Any])` | 250 | Return compact rows for Streamlit and reports. |
+| `summarize_batch_with_llm(batch_dir: Path \| str)` | 559 | Generate an optional LLM summary for a batch plan. |
 
 ### 类与方法
 
 #### `BatchPlan`
 
-- 行号：44
+- 行号：60
 
 | 方法 | 行号 | 说明 |
 |---|---:|---|
-| `samples(self)` | 52 | 待补充 |
+| `samples(self)` | 68 | 待补充 |
 
+
+## `material_ai_workbench.case_based_workflow`
+
+- 文件：`material_ai_workbench/case_based_workflow.py`
+- 模块说明：Prepare a traceable Abaqus run workspace from grounded historical cases.
+
+### 顶层函数
+
+| 函数 | 行号 | 说明 |
+|---|---:|---|
+| `prepare_case_based_plan(payload: dict[str, Any], *, cases_root: Path = CASES_ROOT, output_root: Path = CASE_PLAN_ROOT)` | 44 | Clone editable inputs and write a reviewable, non-submitted job plan. |
+
+### 类与方法
+
+#### `CaseBasedPlanResult`
+
+- 行号：35
+
+
+## `material_ai_workbench.case_cli`
+
+- 文件：`material_ai_workbench/case_cli.py`
+- 模块说明：Command-line interface for Abaqus case ingestion and dataset governance.
+
+### 顶层函数
+
+| 函数 | 行号 | 说明 |
+|---|---:|---|
+| `build_parser()` | 22 | 待补充 |
+| `main(argv: Sequence[str] \| None = None)` | 78 | 待补充 |
+
+## `material_ai_workbench.case_intelligence`
+
+- 文件：`material_ai_workbench/case_intelligence.py`
+- 模块说明：Explainable retrieval and LLM grounding for local simulation cases.
+
+### 顶层函数
+
+| 函数 | 行号 | 说明 |
+|---|---:|---|
+| `rank_similar_cases(query_case: Any, candidates: Iterable[Any], *, top_k: int = 5, weights: dict[str, float] \| None = None)` | 50 | Rank cases with transparent material, geometry, load and mesh evidence. |
+| `search_cases_by_text(query: str, *, cases: Iterable[Any] \| None = None, cases_root: Any = None, top_k: int = 5, training_eligible_only: bool = False)` | 128 | Retrieve local cases for a free-text engineering request. |
+| `build_case_grounding_context(prompt: str, *, cases: Iterable[Any] \| None = None, cases_root: Any = None, top_k: int = 3)` | 179 | Build a compact, path-free context block for an external LLM planner. |
+| `grounding_provenance(context: dict[str, Any])` | 236 | Return the immutable provenance subset attached to an LLM plan. |
 
 ## `material_ai_workbench.case_library`
 
@@ -402,37 +446,55 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 
 | 函数 | 行号 | 说明 |
 |---|---:|---|
-| `scan_case_folder(source_folder: Path \| str, *, title: str, tags: list[str] \| str \| None = None, description: str = '', status: str = 'success', parameters: dict[str, Any] \| None = None, lessons_learned: str = '', next_actions: str = '', cases_root: Path = CASES_ROOT)` | 123 | 待补充 |
-| `batch_import_cases(parent_folder: Path \| str, *, tags: list[str] \| None = None, status: str = 'success', cases_root: Path = CASES_ROOT, skip_existing: bool = True)` | 190 | Scan a parent folder and import all sub-folders as individual cases. |
-| `find_duplicate_cases(source_folder: Path \| str, *, cases_root: Path = CASES_ROOT)` | 247 | Check if a source folder has already been imported. |
-| `save_case_summary(summary: CaseSummary)` | 289 | 待补充 |
-| `write_case_report(summary: CaseSummary)` | 298 | 待补充 |
-| `list_cases(cases_root: Path = CASES_ROOT)` | 306 | 待补充 |
-| `filter_cases(cases: list[CaseSummary], *, tags: list[str] \| str \| None = None, statuses: list[str] \| tuple[str, ...] \| None = None, material_types: list[str] \| tuple[str, ...] \| None = None, case_types: list[str] \| tuple[str, ...] \| None = None, date_from: str \| None = None, date_to: str \| None = None)` | 318 | 待补充 |
-| `infer_case_type(case: CaseSummary)` | 357 | 待补充 |
-| `find_similar_cases(query: CaseSummary \| Path \| str, *, cases: list[CaseSummary] \| None = None, cases_root: Path = CASES_ROOT, top_k: int = 5)` | 375 | Rank archived cases by simple normalized numeric feature distance. |
-| `load_case_summary(case_dir: Path \| str)` | 408 | 待补充 |
-| `case_table_rows(cases: list[CaseSummary])` | 425 | 待补充 |
-| `file_table_rows(summary: CaseSummary, category: str \| None = None)` | 445 | 待补充 |
-| `inp_feature_table_rows(summary: CaseSummary)` | 464 | 待补充 |
-| `result_feature_table_rows(summary: CaseSummary)` | 483 | 待补充 |
-| `odb_extraction_table_rows(summary: CaseSummary)` | 527 | 待补充 |
-| `odb_frame_series_table_rows(summary: CaseSummary)` | 546 | 待补充 |
-| `append_odb_extraction(summary: CaseSummary, extraction: dict[str, Any])` | 564 | 待补充 |
-| `append_odb_frame_series(summary: CaseSummary, series: dict[str, Any])` | 571 | 待补充 |
-| `extract_inp_features(inp_path: Path \| str)` | 578 | 待补充 |
-| `extract_csv_result_features(csv_path: Path \| str)` | 587 | 待补充 |
+| `scan_case_folder(source_folder: Path \| str, *, title: str, tags: list[str] \| str \| None = None, description: str = '', status: str = 'success', parameters: dict[str, Any] \| None = None, lessons_learned: str = '', next_actions: str = '', units: dict[str, Any] \| str \| None = None, solver_version: str = '', source_mode: str = 'reference', cases_root: Path = CASES_ROOT)` | 138 | 待补充 |
+| `batch_import_cases(parent_folder: Path \| str, *, tags: list[str] \| None = None, status: str = 'success', cases_root: Path = CASES_ROOT, skip_existing: bool = True, units: dict[str, Any] \| str \| None = None, solver_version: str = '', source_mode: str = 'reference')` | 224 | Scan a parent folder and import all sub-folders as individual cases. |
+| `find_duplicate_cases(source_folder: Path \| str, *, cases_root: Path = CASES_ROOT)` | 289 | Check if a source folder has already been imported. |
+| `save_case_summary(summary: CaseSummary)` | 353 | 待补充 |
+| `write_case_report(summary: CaseSummary)` | 371 | 待补充 |
+| `list_cases(cases_root: Path = CASES_ROOT)` | 379 | 待补充 |
+| `filter_cases(cases: list[CaseSummary], *, tags: list[str] \| str \| None = None, statuses: list[str] \| tuple[str, ...] \| None = None, material_types: list[str] \| tuple[str, ...] \| None = None, case_types: list[str] \| tuple[str, ...] \| None = None, date_from: str \| None = None, date_to: str \| None = None)` | 391 | 待补充 |
+| `infer_case_type(case: CaseSummary)` | 440 | 待补充 |
+| `find_similar_cases(query: CaseSummary \| Path \| str, *, cases: list[CaseSummary] \| None = None, cases_root: Path = CASES_ROOT, top_k: int = 5, weights: dict[str, float] \| None = None)` | 461 | Rank archived cases with explainable hybrid engineering similarity. |
+| `load_case_summary(case_dir: Path \| str)` | 487 | 待补充 |
+| `case_table_rows(cases: list[CaseSummary])` | 510 | 待补充 |
+| `file_table_rows(summary: CaseSummary, category: str \| None = None)` | 534 | 待补充 |
+| `inp_feature_table_rows(summary: CaseSummary)` | 555 | 待补充 |
+| `result_feature_table_rows(summary: CaseSummary)` | 574 | 待补充 |
+| `odb_extraction_table_rows(summary: CaseSummary)` | 623 | 待补充 |
+| `odb_frame_series_table_rows(summary: CaseSummary)` | 642 | 待补充 |
+| `append_odb_extraction(summary: CaseSummary, extraction: dict[str, Any])` | 660 | 待补充 |
+| `append_odb_frame_series(summary: CaseSummary, series: dict[str, Any])` | 675 | 待补充 |
+| `extract_inp_features(inp_path: Path \| str)` | 684 | 待补充 |
+| `extract_csv_result_features(csv_path: Path \| str)` | 693 | 待补充 |
 
 ### 类与方法
 
 #### `CaseFile`
 
-- 行号：81
+- 行号：88
 
 #### `CaseSummary`
 
-- 行号：92
+- 行号：101
 
+
+## `material_ai_workbench.case_package`
+
+- 文件：`material_ai_workbench/case_package.py`
+- 模块说明：Stable case-package contract and quality gates for archived Abaqus work.
+
+### 顶层函数
+
+| 函数 | 行号 | 说明 |
+|---|---:|---|
+| `normalize_case_units(units: dict[str, Any] \| str \| None, parameters: dict[str, Any] \| None = None)` | 37 | Normalize an explicit Abaqus unit declaration without guessing units. |
+| `fingerprint_file(path: Path \| str, size_bytes: int \| None = None)` | 78 | Return a full hash for normal files and a bounded sampled hash for large files. |
+| `fingerprint_case_files(files: Iterable[Any])` | 104 | Build a stable source fingerprint from ordered relative paths and file hashes. |
+| `evaluate_case_quality(summary: Any)` | 124 | Evaluate whether an indexed case is trustworthy enough for ML training. |
+| `build_case_package(summary: Any)` | 324 | Build the public, versioned case-package document from an internal summary. |
+| `write_case_package(summary: Any)` | 387 | 待补充 |
+| `load_case_package(case_dir: Path \| str)` | 396 | 待补充 |
+| `quality_table_rows(quality: dict[str, Any])` | 409 | 待补充 |
 
 ## `material_ai_workbench.closed_loop_report`
 
@@ -574,14 +636,14 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 
 | 函数 | 行号 | 说明 |
 |---|---:|---|
-| `export_case_dataset(*, cases_root: Path = CASES_ROOT, output_root: Path = DATASETS_ROOT, name: str = 'case_dataset', case_dirs: list[Path \| str] \| tuple[Path \| str, ...] \| None = None)` | 28 | Export case-library features into CSV assets for ML experiments. |
-| `create_dataset_split(dataset_csv: Path \| str, *, output_dir: Path \| None = None, test_fraction: float = 0.25, random_seed: int = 42)` | 339 | Create train/validation split manifest for a case dataset. |
+| `export_case_dataset(*, cases_root: Path = CASES_ROOT, output_root: Path = DATASETS_ROOT, name: str = 'case_dataset', case_dirs: list[Path \| str] \| tuple[Path \| str, ...] \| None = None, training_only: bool = False)` | 37 | Export case-library features into CSV assets for ML experiments. |
+| `create_dataset_split(dataset_csv: Path \| str, *, output_dir: Path \| None = None, test_fraction: float = 0.25, random_seed: int = 42)` | 460 | Create train/validation split manifest for a case dataset. |
 
 ### 类与方法
 
 #### `DatasetExport`
 
-- 行号：17
+- 行号：24
 
 
 ## `material_ai_workbench.desktop_launcher`
@@ -597,19 +659,20 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 | `configure_desktop_environment(app_root: Path \| None = None)` | 63 | Create writable folders and expose them to the workbench backend. |
 | `configure_logging(paths: DesktopPaths, *, debug: bool = False)` | 89 | Configure a rotating log that remains available after GUI failures. |
 | `find_available_port(requested_port: int \| None = None)` | 105 | Reserve-check a loopback port and return it for the backend process. |
-| `streamlit_app_path()` | 119 | Locate the Streamlit entry file in source and frozen builds. |
-| `backend_command(port: int, *, debug: bool = False)` | 127 | Build the child command for source and PyInstaller execution. |
-| `run_streamlit_server(port: int, *, debug: bool = False)` | 137 | Run the private Streamlit backend in the current process. |
-| `start_backend(port: int, paths: DesktopPaths, *, debug: bool = False)` | 160 | Start the backend without displaying a second console window. |
-| `wait_for_backend(process: subprocess.Popen[bytes], port: int, *, timeout_seconds: float = DEFAULT_STARTUP_TIMEOUT)` | 189 | Wait until Streamlit reports healthy or fail with actionable context. |
-| `stop_backend(process: subprocess.Popen[bytes] \| None)` | 217 | Stop the owned backend and prevent orphaned localhost servers. |
-| `log_tail(path: Path, *, max_lines: int = 24)` | 231 | Return the end of a UTF-8 log without failing the error dialog. |
-| `run_core_self_check(paths: DesktopPaths)` | 240 | Exercise the packaged numerical stack with a small material-training run. |
-| `open_native_window(url: str, *, debug: bool = False)` | 296 | Open the workbench URL in a native Windows webview window. |
-| `run_browser_mode(url: str, process: subprocess.Popen[bytes])` | 314 | Open the app in the default browser for development diagnostics. |
-| `show_message(title: str, message: str, *, error: bool = False)` | 326 | Show a native message box when no console is available. |
-| `build_parser()` | 336 | 待补充 |
-| `main(argv: Sequence[str] \| None = None)` | 356 | 待补充 |
+| `streamlit_app_path()` | 121 | Locate the Streamlit entry file in source and frozen builds. |
+| `backend_command(port: int, *, debug: bool = False)` | 129 | Build the child command for source and PyInstaller execution. |
+| `run_streamlit_server(port: int, *, debug: bool = False)` | 139 | Run the private Streamlit backend in the current process. |
+| `start_backend(port: int, paths: DesktopPaths, *, debug: bool = False)` | 166 | Start the backend without displaying a second console window. |
+| `wait_for_backend(process: subprocess.Popen[bytes], port: int, *, timeout_seconds: float = DEFAULT_STARTUP_TIMEOUT)` | 195 | Wait until Streamlit reports healthy or fail with actionable context. |
+| `stop_backend(process: subprocess.Popen[bytes] \| None)` | 225 | Stop the owned backend and prevent orphaned localhost servers. |
+| `log_tail(path: Path, *, max_lines: int = 24)` | 239 | Return the end of a UTF-8 log without failing the error dialog. |
+| `run_core_self_check(paths: DesktopPaths)` | 248 | Exercise the packaged numerical stack with a small material-training run. |
+| `verify_native_window_runtime()` | 281 | Load the Windows pywebview backend and its bundled WebView2 assemblies. |
+| `open_native_window(url: str, *, debug: bool = False)` | 321 | Open the workbench URL in a native Windows webview window. |
+| `run_browser_mode(url: str, process: subprocess.Popen[bytes])` | 341 | Open the app in the default browser for development diagnostics. |
+| `show_message(title: str, message: str, *, error: bool = False)` | 353 | Show a native message box when no console is available. |
+| `build_parser()` | 363 | 待补充 |
+| `main(argv: Sequence[str] \| None = None)` | 395 | 待补充 |
 
 ### 类与方法
 
@@ -630,7 +693,7 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 
 #### `SingleInstanceGuard`
 
-- 行号：270
+- 行号：295
 - 说明：Windows named-mutex guard; a no-op on other platforms.
 
 
@@ -683,45 +746,45 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 
 | 函数 | 行号 | 说明 |
 |---|---:|---|
-| `read_env_file(path: Path = ENV_FILE)` | 73 | 待补充 |
-| `write_env_values(path: Path, updates: dict[str, str])` | 89 | 待补充 |
-| `provider_preset(provider_key: str)` | 178 | 待补充 |
-| `llm_config_from_env(env_path: Path = ENV_FILE)` | 182 | 待补充 |
-| `apply_llm_config(config: LlmChatConfig, api_key_value: str \| None = None)` | 203 | 待补充 |
-| `save_llm_config(config: LlmChatConfig, api_key_value: str \| None = None, env_path: Path = ENV_FILE)` | 213 | 待补充 |
-| `test_llm_connection(config: LlmChatConfig, *, api_key_value: str \| None = None, transport: Transport \| None = None)` | 228 | 待补充 |
-| `plan_task_with_llm(prompt: str, config: LlmChatConfig, transport: Transport \| None = None)` | 252 | Call an OpenAI-compatible chat endpoint and parse a task JSON response. |
-| `interpret_report(report_text: str, report_type: str = 'material_model', *, config: LlmChatConfig \| None = None, transport: Transport \| None = None)` | 329 | Generate an optional LLM interpretation for a Workbench report. |
+| `read_env_file(path: Path = ENV_FILE)` | 77 | 待补充 |
+| `write_env_values(path: Path, updates: dict[str, str])` | 93 | 待补充 |
+| `provider_preset(provider_key: str)` | 206 | 待补充 |
+| `llm_config_from_env(env_path: Path = ENV_FILE)` | 210 | 待补充 |
+| `apply_llm_config(config: LlmChatConfig, api_key_value: str \| None = None)` | 241 | 待补充 |
+| `save_llm_config(config: LlmChatConfig, api_key_value: str \| None = None, env_path: Path = ENV_FILE)` | 253 | 待补充 |
+| `test_llm_connection(config: LlmChatConfig, *, api_key_value: str \| None = None, transport: Transport \| None = None)` | 270 | 待补充 |
+| `plan_task_with_llm(prompt: str, config: LlmChatConfig, transport: Transport \| None = None, case_context: dict[str, Any] \| None = None)` | 296 | Call an OpenAI-compatible chat endpoint and parse a task JSON response. |
+| `interpret_report(report_text: str, report_type: str = 'material_model', *, config: LlmChatConfig \| None = None, transport: Transport \| None = None)` | 384 | Generate an optional LLM interpretation for a Workbench report. |
 
 ### 类与方法
 
 #### `LlmConfigError(RuntimeError)`
 
-- 行号：125
+- 行号：135
 - 说明：Raised when an LLM request is not configured enough to run.
 
 #### `LlmResponseError(RuntimeError)`
 
-- 行号：129
+- 行号：139
 - 说明：Raised when the LLM response cannot be converted into a task JSON.
 
 #### `LlmChatConfig`
 
-- 行号：134
+- 行号：144
 
 | 方法 | 行号 | 说明 |
 |---|---:|---|
-| `api_key(self)` | 143 | 待补充 |
-| `validate(self)` | 146 | 待补充 |
-| `to_public_dict(self)` | 154 | 待补充 |
+| `api_key(self)` | 165 | 待补充 |
+| `validate(self)` | 168 | 待补充 |
+| `to_public_dict(self)` | 182 | 待补充 |
 
 #### `LlmTaskPlan`
 
-- 行号：162
+- 行号：190
 
 #### `LlmConnectionTest`
 
-- 行号：170
+- 行号：198
 
 
 ## `material_ai_workbench.logging_config`
@@ -883,8 +946,8 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 | 函数 | 行号 | 说明 |
 |---|---:|---|
 | `run_plate_hole_acceptance(config: PlateHoleAcceptanceConfig \| None = None, *, execute: bool = False, run_dir: Path \| str \| None = None)` | 90 | Prepare or execute the plate-hole workflow and persist every state change. |
-| `resume_plate_hole_acceptance(run_dir: Path \| str, *, execute: bool = True, submit_job: bool \| None = None, archive_case: bool \| None = None, backend: str \| None = None)` | 351 | Resume a prepared or interrupted run from its persisted configuration. |
-| `main(argv: list[str] \| None = None)` | 1321 | 待补充 |
+| `resume_plate_hole_acceptance(run_dir: Path \| str, *, execute: bool = True, submit_job: bool \| None = None, archive_case: bool \| None = None, backend: str \| None = None)` | 366 | Resume a prepared or interrupted run from its persisted configuration. |
+| `main(argv: list[str] \| None = None)` | 1336 | 待补充 |
 
 ### 类与方法
 
@@ -895,6 +958,39 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 #### `PlateHoleAcceptanceResult`
 
 - 行号：78
+
+
+## `material_ai_workbench.plate_hole_batch`
+
+- 文件：`material_ai_workbench/plate_hole_batch.py`
+- 模块说明：Resumable 3D plate-hole Abaqus batch and surrogate-model pipeline.
+
+### 顶层函数
+
+| 函数 | 行号 | 说明 |
+|---|---:|---|
+| `create_plate_hole_batch_plan(config: PlateHoleBatchConfig \| None = None)` | 77 | Create a Cartesian geometry/material/load plan without calling Abaqus. |
+| `load_plate_hole_batch_plan(plan_dir: Path \| str)` | 147 | 待补充 |
+| `list_plate_hole_batch_plans(root: Path = PLATE_HOLE_BATCH_ROOT)` | 160 | Return persisted plate-hole batch folders, newest first. |
+| `save_plate_hole_batch_plan(plan: PlateHoleBatchPlan)` | 179 | 待补充 |
+| `run_plate_hole_batch_plan(plan_dir: Path \| str, *, execute: bool = False, submit_jobs: bool = False, archive_cases: bool = True, export_dataset_after: bool = False, train_models_after: bool = False, max_samples: int \| None = None)` | 188 | Prepare or solve pending samples and optionally train RF/MLP/GBR surrogates. |
+| `batch_table_rows(plan: PlateHoleBatchPlan \| dict[str, Any])` | 249 | 待补充 |
+| `build_parser()` | 518 | 待补充 |
+| `main(argv: Sequence[str] \| None = None)` | 544 | 待补充 |
+
+### 类与方法
+
+#### `PlateHoleBatchConfig`
+
+- 行号：43
+
+#### `PlateHoleBatchPlan`
+
+- 行号：64
+
+| 方法 | 行号 | 说明 |
+|---|---:|---|
+| `samples(self)` | 72 | 待补充 |
 
 
 ## `material_ai_workbench.run_composite_batch`
@@ -999,7 +1095,7 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 
 | 函数 | 行号 | 说明 |
 |---|---:|---|
-| `main()` | 197 | 待补充 |
+| `main()` | 211 | 待补充 |
 
 ## `material_ai_workbench.surrogate_model`
 
@@ -1010,17 +1106,17 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 
 | 函数 | 行号 | 说明 |
 |---|---:|---|
-| `list_dataset_exports(root: Path = DATASETS_ROOT)` | 102 | Return dataset export folders that contain case_dataset.csv. |
-| `list_surrogate_runs(root: Path = SURROGATES_ROOT)` | 114 | Return surrogate-model run folders, newest first. |
-| `compare_all_models(dataset_dir: Path \| str, *, target_column: str = DEFAULT_TARGET, output_root: Path = SURROGATES_ROOT, random_state: int = 42)` | 123 | Train RF, MLP, and GBR on the same dataset and return a comparison table. |
-| `surrogate_comparison_rows(runs: Iterable[Path \| str] \| None = None, *, dataset_dir: Path \| str \| None = None, target_column: str \| None = None)` | 178 | Build compact comparison rows from surrogate_metrics.json files. |
-| `train_surrogate_from_dataset(dataset_dir: Path \| str, *, target_column: str = DEFAULT_TARGET, model_kind: str = 'random_forest', output_root: Path = SURROGATES_ROOT, random_state: int = 42, uncertainty: str = 'none')` | 233 | Train a small surrogate model from a case-dataset export. |
+| `list_dataset_exports(root: Path = DATASETS_ROOT)` | 112 | Return dataset export folders that contain case_dataset.csv. |
+| `list_surrogate_runs(root: Path = SURROGATES_ROOT)` | 128 | Return surrogate-model run folders, newest first. |
+| `compare_all_models(dataset_dir: Path \| str, *, target_column: str = DEFAULT_TARGET, output_root: Path = SURROGATES_ROOT, random_state: int = 42)` | 141 | Train RF, MLP, and GBR on the same dataset and return a comparison table. |
+| `surrogate_comparison_rows(runs: Iterable[Path \| str] \| None = None, *, dataset_dir: Path \| str \| None = None, target_column: str \| None = None)` | 206 | Build compact comparison rows from surrogate_metrics.json files. |
+| `train_surrogate_from_dataset(dataset_dir: Path \| str, *, target_column: str = DEFAULT_TARGET, model_kind: str = 'random_forest', output_root: Path = SURROGATES_ROOT, random_state: int = 42, uncertainty: str = 'none')` | 271 | Train a small surrogate model from a case-dataset export. |
 
 ### 类与方法
 
 #### `SurrogateRun`
 
-- 行号：90
+- 行号：100
 
 
 ## `material_ai_workbench.task_schema`
@@ -1032,29 +1128,29 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 
 | 函数 | 行号 | 说明 |
 |---|---:|---|
-| `validate_task_payload(payload: dict[str, Any])` | 104 | Validate a task JSON payload against the schema for its task_type. |
-| `infer_steps(payload: dict[str, Any])` | 159 | Return explicit or inferred execution steps for a task payload. |
-| `build_executable_plan(payload: dict[str, Any])` | 186 | Merge defaults, validate schema, and build a UI-friendly execution plan. |
-| `dry_run_summary(payload: dict[str, Any], schema_result: SchemaResult)` | 208 | Generate a human-readable dry-run summary of what would happen. |
-| `merge_with_defaults(payload: dict[str, Any])` | 251 | Fill missing fields with sensible defaults so the plan can still execute. |
+| `validate_task_payload(payload: dict[str, Any])` | 152 | Validate a task JSON payload against the schema for its task_type. |
+| `infer_steps(payload: dict[str, Any])` | 239 | Return explicit or inferred execution steps for a task payload. |
+| `build_executable_plan(payload: dict[str, Any])` | 272 | Merge defaults, validate schema, and build a UI-friendly execution plan. |
+| `dry_run_summary(payload: dict[str, Any], schema_result: SchemaResult)` | 294 | Generate a human-readable dry-run summary of what would happen. |
+| `merge_with_defaults(payload: dict[str, Any])` | 344 | Fill missing fields with sensible defaults so the plan can still execute. |
 
 ### 类与方法
 
 #### `SchemaResult`
 
-- 行号：75
+- 行号：123
 
 #### `ExecutableStep`
 
-- 行号：84
+- 行号：132
 
 #### `ExecutablePlan`
 
-- 行号：94
+- 行号：142
 
 | 方法 | 行号 | 说明 |
 |---|---:|---|
-| `can_execute(self)` | 100 | 待补充 |
+| `can_execute(self)` | 148 | 待补充 |
 
 
 ## `material_ai_workbench.time_series_surrogate`

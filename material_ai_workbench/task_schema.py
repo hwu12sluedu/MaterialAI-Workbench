@@ -6,24 +6,45 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
-
 # -- Schema definitions for each task type --
 
 REQUIRED_TASK_FIELDS: dict[str, dict[str, Any]] = {
     "material_training": {
-        "material": ["material_type", "name", "youngs_modulus", "poisson_ratio", "yield_strength"],
+        "material": [
+            "material_type",
+            "name",
+            "youngs_modulus",
+            "poisson_ratio",
+            "yield_strength",
+        ],
         "ml": ["c_value", "gamma", "n_load_cases", "n_sequence", "test_size"],
         "abaqus": [],
     },
     "material_training_with_abaqus_check": {
-        "material": ["material_type", "name", "youngs_modulus", "poisson_ratio", "yield_strength"],
+        "material": [
+            "material_type",
+            "name",
+            "youngs_modulus",
+            "poisson_ratio",
+            "yield_strength",
+        ],
         "ml": ["c_value", "gamma", "n_load_cases", "n_sequence", "test_size"],
         "abaqus": ["run_check", "max_load_cases", "timeout_seconds"],
     },
     "composite_plate_hole": {
-        "composite": ["name", "fiber_volume_fraction", "fiber_e", "fiber_nu",
-                      "matrix_e", "matrix_nu", "interface_efficiency", "hole_radius",
-                      "length", "width", "thickness"],
+        "composite": [
+            "name",
+            "fiber_volume_fraction",
+            "fiber_e",
+            "fiber_nu",
+            "matrix_e",
+            "matrix_nu",
+            "interface_efficiency",
+            "hole_radius",
+            "length",
+            "width",
+            "thickness",
+        ],
         "abaqus": [],
     },
     "batch_parameter_sweep": {
@@ -37,6 +58,16 @@ REQUIRED_TASK_FIELDS: dict[str, dict[str, Any]] = {
     },
     "odb_extraction": {
         "odb": ["odb_path", "fields"],
+    },
+    "case_based_simulation": {
+        "case_plan": [
+            "objective",
+            "reference_case_ids",
+            "changes",
+            "unit_system",
+            "submit_job",
+        ],
+        "grounding": ["retrieved_case_ids", "requires_user_confirmation"],
     },
     "closed_loop_report": {},
 }
@@ -54,6 +85,11 @@ STEP_LABELS: dict[str, str] = {
     "train_models": "Train surrogate models (RF/MLP/GBR)",
     "compare": "Compare model performance",
     "search_cases": "Search case library",
+    "retrieve_case": "Retrieve reference case evidence",
+    "clone_case_inputs": "Clone reference inputs into a new run workspace",
+    "review_case_differences": "Review parameter and unit differences",
+    "prepare_job": "Prepare Abaqus job files without submission",
+    "submit_job": "Submit confirmed Abaqus job",
     "generate_report": "Generate closed-loop validation report",
 }
 
@@ -65,10 +101,22 @@ DEFAULT_STEPS_BY_TASK_TYPE: dict[str, list[str]] = {
     "case_library_query": ["search_cases"],
     "surrogate_training": ["train_models", "compare"],
     "odb_extraction": ["odb_extract"],
+    "case_based_simulation": [
+        "retrieve_case",
+        "clone_case_inputs",
+        "review_case_differences",
+        "prepare_job",
+    ],
     "closed_loop_report": ["generate_report"],
 }
 
-ABAQUS_ACTIONS = {"abaqus_check", "run_pbc", "solve_plate", "odb_extract"}
+ABAQUS_ACTIONS = {
+    "abaqus_check",
+    "run_pbc",
+    "solve_plate",
+    "odb_extract",
+    "submit_job",
+}
 
 
 @dataclass
@@ -110,7 +158,9 @@ def validate_task_payload(payload: dict[str, Any]) -> SchemaResult:
         return SchemaResult(
             valid=False,
             task_type=task_type or "unknown",
-            warnings=[f"Unknown task_type '{task_type}'. Supported: {', '.join(REQUIRED_TASK_FIELDS)}"],
+            warnings=[
+                f"Unknown task_type '{task_type}'. Supported: {', '.join(REQUIRED_TASK_FIELDS)}"
+            ],
         )
 
     missing_sections: list[str] = []
@@ -127,14 +177,20 @@ def validate_task_payload(payload: dict[str, Any]) -> SchemaResult:
                 warnings.append(f"Section '{section}' should be a JSON object.")
                 missing_fields[section] = list(required_fields)
             else:
-                mf = [f for f in required_fields if f not in section_data or section_data[f] is None]
+                mf = [
+                    f
+                    for f in required_fields
+                    if f not in section_data or section_data[f] is None
+                ]
                 if mf:
                     missing_fields[section] = mf
 
     if task_type == "material_training_with_abaqus_check":
         abaqus = payload.get("abaqus", {})
         if isinstance(abaqus, dict) and not abaqus.get("run_check", False):
-            warnings.append("Abaqus check is configured but run_check is False — Abaqus will NOT be called.")
+            warnings.append(
+                "Abaqus check is configured but run_check is False — Abaqus will NOT be called."
+            )
 
     if task_type == "composite_plate_hole":
         composite = payload.get("composite", {})
@@ -142,11 +198,35 @@ def validate_task_payload(payload: dict[str, Any]) -> SchemaResult:
             run_abaqus = composite.get("run_abaqus", False)
             submit_job = composite.get("submit_job", False)
             if not run_abaqus:
-                warnings.append("run_abaqus=False — model files will be generated but Abaqus will NOT be called.")
+                warnings.append(
+                    "run_abaqus=False — model files will be generated but Abaqus will NOT be called."
+                )
             if run_abaqus and not submit_job:
-                warnings.append("run_abaqus=True but submit_job=False — Abaqus CAE will build geometry but NOT solve.")
+                warnings.append(
+                    "run_abaqus=True but submit_job=False — Abaqus CAE will build geometry but NOT solve."
+                )
 
-    valid = len(missing_sections) == 0 and all(len(v) == 0 for v in missing_fields.values())
+    if task_type == "case_based_simulation":
+        case_plan = payload.get("case_plan", {})
+        grounding = payload.get("grounding", {})
+        if isinstance(case_plan, dict) and case_plan.get("submit_job"):
+            warnings.append(
+                "Abaqus submission requested; a separate explicit user confirmation is required."
+            )
+        if isinstance(case_plan, dict) and isinstance(grounding, dict):
+            allowed = set(grounding.get("retrieved_case_ids", []) or [])
+            requested = set(case_plan.get("reference_case_ids", []) or [])
+            if requested - allowed:
+                warnings.append(
+                    "Reference case IDs are not present in grounding evidence."
+                )
+                missing_fields.setdefault("case_plan", []).append(
+                    "reference_case_ids_from_grounding"
+                )
+
+    valid = len(missing_sections) == 0 and all(
+        len(v) == 0 for v in missing_fields.values()
+    )
     return SchemaResult(
         valid=valid,
         task_type=task_type,
@@ -176,7 +256,13 @@ def infer_steps(payload: dict[str, Any]) -> list[dict[str, Any]]:
     actions = list(DEFAULT_STEPS_BY_TASK_TYPE.get(task_type, ["train_material"]))
     text = str(payload.get("source_text", "")).lower()
     if task_type == "composite_plate_hole":
-        if any(word in text for word in ("代理模型", "surrogate", "预测模型", "train surrogate")) or "surrogate" in payload:
+        if (
+            any(
+                word in text
+                for word in ("代理模型", "surrogate", "预测模型", "train surrogate")
+            )
+            or "surrogate" in payload
+        ):
             actions.extend(["odb_extract", "export_dataset", "train_models", "compare"])
         if any(word in text for word in ("报告", "report", "闭环")):
             actions.append("generate_report")
@@ -228,7 +314,9 @@ def dry_run_summary(payload: dict[str, Any], schema_result: SchemaResult) -> str
     if steps:
         lines.append("### Execution Plan")
         for i, step in enumerate(steps, 1):
-            action = step.get("action", "unknown") if isinstance(step, dict) else str(step)
+            action = (
+                step.get("action", "unknown") if isinstance(step, dict) else str(step)
+            )
             label = STEP_LABELS.get(action, action)
             suffix = " (Abaqus)" if action in ABAQUS_ACTIONS else ""
             lines.append(f"{i}. **{label}**{suffix}")
@@ -237,10 +325,15 @@ def dry_run_summary(payload: dict[str, Any], schema_result: SchemaResult) -> str
 
     lines.append("")
     lines.append("### Key Parameters")
-    for section in ["material", "composite", "batch", "surrogate"]:
+    for section in ["material", "composite", "batch", "surrogate", "case_plan"]:
         if section in payload and isinstance(payload[section], dict):
             for k, v in payload[section].items():
-                if k not in ("hill_ratios", "barlat_alphas", "barlat_coeffs", "yield_strengths"):
+                if k not in (
+                    "hill_ratios",
+                    "barlat_alphas",
+                    "barlat_coeffs",
+                    "yield_strengths",
+                ):
                     lines.append(f"- `{section}.{k}` = {v}")
                 elif isinstance(v, list):
                     lines.append(f"- `{section}.{k}` = [{len(v)} values]")
@@ -251,6 +344,7 @@ def dry_run_summary(payload: dict[str, Any], schema_result: SchemaResult) -> str
 def merge_with_defaults(payload: dict[str, Any]) -> dict[str, Any]:
     """Fill missing fields with sensible defaults so the plan can still execute."""
     import copy
+
     result = copy.deepcopy(payload)
     task_type = result.get("task_type", "material_training")
 

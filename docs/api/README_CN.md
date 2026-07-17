@@ -5,6 +5,9 @@ API 文档分两层：
 1. 自动清单：列出 `src/pylabfea` 和 `material_ai_workbench` 的公开函数、类和方法。
 2. 使用指南：按业务流程说明应该调用哪些 API。
 
+v0.4 案例包、可解释检索、历史案例约束和带孔板批量接口见
+[案例智能 API](CASE_INTELLIGENCE_API_CN.md)。
+
 ## 生成自动 API 清单
 
 ```powershell

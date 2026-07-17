@@ -27,7 +27,6 @@ from sklearn.preprocessing import StandardScaler
 from material_ai_workbench.config import SURROGATES_ROOT as DEFAULT_SURROGATES_ROOT
 from material_ai_workbench.dataset_export import DATASETS_ROOT
 
-
 SURROGATES_ROOT = DEFAULT_SURROGATES_ROOT
 DEFAULT_TARGET = "latest_odb_max_mises"
 TARGET_COLUMNS = {
@@ -46,10 +45,21 @@ TARGET_COLUMNS = {
 }
 IDENTIFIER_COLUMNS = {
     "case_id",
+    "case_schema_version",
+    "source_fingerprint",
     "title",
     "source_folder",
     "latest_frame_series_csv",
     "updated_at",
+    "status",
+    "unit_system",
+    "unit_length",
+    "unit_stress",
+    "quality_status",
+    "quality_score",
+    "execution_state",
+    "training_eligible",
+    "quality_blocking_reasons",
 }
 NUMERIC_FEATURE_COLUMNS = {
     "file_count",
@@ -105,7 +115,11 @@ def list_dataset_exports(root: Path = DATASETS_ROOT) -> list[Path]:
     if not root.exists():
         return []
     return sorted(
-        [path for path in root.iterdir() if path.is_dir() and (path / "case_dataset.csv").exists()],
+        [
+            path
+            for path in root.iterdir()
+            if path.is_dir() and (path / "case_dataset.csv").exists()
+        ],
         key=lambda item: item.stat().st_mtime,
         reverse=True,
     )
@@ -116,7 +130,11 @@ def list_surrogate_runs(root: Path = SURROGATES_ROOT) -> list[Path]:
 
     if not root.exists():
         return []
-    runs = [path for path in root.iterdir() if path.is_dir() and (path / "surrogate_metrics.json").exists()]
+    runs = [
+        path
+        for path in root.iterdir()
+        if path.is_dir() and (path / "surrogate_metrics.json").exists()
+    ]
     return sorted(runs, key=lambda item: item.stat().st_mtime, reverse=True)
 
 
@@ -132,6 +150,7 @@ def compare_all_models(
     Returns a list of dicts with model_name, mae, rmse, r2, cv_mae, cv_rmse, cv_r2, training_time.
     """
     import time
+
     rows: list[dict[str, Any]] = []
     models = [
         ("random_forest", "Random Forest"),
@@ -150,28 +169,37 @@ def compare_all_models(
             )
             elapsed = time.time() - t0
             m = run.metrics
-            rows.append({
-                "model": label,
-                "model_kind": model_kind,
-                "mae": m.get("mae"),
-                "rmse": m.get("rmse"),
-                "r2": m.get("r2"),
-                "cv_mae_mean": m.get("cv_mae_mean"),
-                "cv_rmse_mean": m.get("cv_rmse_mean"),
-                "cv_r2_mean": m.get("cv_r2_mean"),
-                "training_time_s": round(elapsed, 1),
-                "run_dir": str(run.run_dir),
-                "error": None,
-            })
+            rows.append(
+                {
+                    "model": label,
+                    "model_kind": model_kind,
+                    "mae": m.get("mae"),
+                    "rmse": m.get("rmse"),
+                    "r2": m.get("r2"),
+                    "cv_mae_mean": m.get("cv_mae_mean"),
+                    "cv_rmse_mean": m.get("cv_rmse_mean"),
+                    "cv_r2_mean": m.get("cv_r2_mean"),
+                    "training_time_s": round(elapsed, 1),
+                    "run_dir": str(run.run_dir),
+                    "error": None,
+                }
+            )
         except Exception as exc:
-            rows.append({
-                "model": label,
-                "model_kind": model_kind,
-                "mae": None, "rmse": None, "r2": None,
-                "cv_mae_mean": None, "cv_rmse_mean": None, "cv_r2_mean": None,
-                "training_time_s": None, "run_dir": None,
-                "error": str(exc),
-            })
+            rows.append(
+                {
+                    "model": label,
+                    "model_kind": model_kind,
+                    "mae": None,
+                    "rmse": None,
+                    "r2": None,
+                    "cv_mae_mean": None,
+                    "cv_rmse_mean": None,
+                    "cv_r2_mean": None,
+                    "training_time_s": None,
+                    "run_dir": None,
+                    "error": str(exc),
+                }
+            )
     return rows
 
 
@@ -183,7 +211,9 @@ def surrogate_comparison_rows(
 ) -> list[dict[str, Any]]:
     """Build compact comparison rows from surrogate_metrics.json files."""
 
-    selected_runs = [Path(item) for item in runs] if runs is not None else list_surrogate_runs()
+    selected_runs = (
+        [Path(item) for item in runs] if runs is not None else list_surrogate_runs()
+    )
     dataset_filter = Path(dataset_dir).expanduser().resolve() if dataset_dir else None
     rows: list[dict[str, Any]] = []
 
@@ -196,7 +226,11 @@ def surrogate_comparison_rows(
         except Exception:
             continue
 
-        dataset_csv = Path(str(metrics.get("dataset_csv", ""))) if metrics.get("dataset_csv") else None
+        dataset_csv = (
+            Path(str(metrics.get("dataset_csv", "")))
+            if metrics.get("dataset_csv")
+            else None
+        )
         metrics_dataset_dir = dataset_csv.parent.resolve() if dataset_csv else None
         if dataset_filter and metrics_dataset_dir != dataset_filter:
             continue
@@ -220,8 +254,12 @@ def surrogate_comparison_rows(
                 "cv_rmse_mean": metrics.get("cv_rmse_mean"),
                 "cv_r2_mean": metrics.get("cv_r2_mean"),
                 "uncertainty": metrics.get("uncertainty", ""),
-                "prediction_interval_mean_half_width": metrics.get("prediction_interval_mean_half_width"),
-                "prediction_interval_coverage": metrics.get("prediction_interval_coverage"),
+                "prediction_interval_mean_half_width": metrics.get(
+                    "prediction_interval_mean_half_width"
+                ),
+                "prediction_interval_coverage": metrics.get(
+                    "prediction_interval_coverage"
+                ),
                 "created_at": metrics.get("created_at", ""),
                 "quality_note": metrics.get("quality_note", ""),
             }
@@ -251,8 +289,12 @@ def train_surrogate_from_dataset(
     if target_column not in rows[0]:
         raise ValueError(f"Target column not found: {target_column}")
 
+    rows, quality_skipped_rows, governance = _governed_training_rows(rows)
+    if not rows:
+        raise ValueError("No rows pass the dataset training quality gate.")
+
     clean_rows = []
-    skipped_rows = []
+    skipped_rows = list(quality_skipped_rows)
     for row in rows:
         target = _to_float(row.get(target_column))
         if target is None:
@@ -272,14 +314,18 @@ def train_surrogate_from_dataset(
     run_dir = _unique_run_dir(output_root, dataset_csv.stem, target_column, model_name)
     run_dir.mkdir(parents=True, exist_ok=False)
 
-    cv_metrics = _cross_validation_metrics(feature_dicts, targets, model_name, random_state)
+    cv_metrics = _cross_validation_metrics(
+        feature_dicts, targets, model_name, random_state
+    )
     model, predictions, eval_indices, evaluation_mode = _fit_and_predict(
         feature_dicts,
         targets,
         model_name=model_name,
         random_state=random_state,
     )
-    uncertainty_payload = _prediction_uncertainty(model, feature_dicts, uncertainty_mode)
+    uncertainty_payload = _prediction_uncertainty(
+        model, feature_dicts, uncertainty_mode
+    )
     metrics = _metrics(
         targets=targets,
         predictions=predictions,
@@ -293,6 +339,8 @@ def train_surrogate_from_dataset(
         dataset_csv=dataset_csv,
     )
     metrics.update(cv_metrics)
+    metrics["dataset_governance"] = governance
+    metrics["quality_gate_skipped_case_ids"] = quality_skipped_rows
     metrics["uncertainty"] = uncertainty_mode
     metrics.update(_uncertainty_metrics(targets, uncertainty_payload))
 
@@ -306,12 +354,31 @@ def train_surrogate_from_dataset(
 
     _write_features_csv(features_csv, case_ids, feature_dicts, feature_names)
     _write_targets_csv(targets_csv, case_ids, target_column, targets)
-    _write_predictions_csv(predictions_csv, case_ids, target_column, targets, predictions, eval_indices, uncertainty_payload)
-    metrics_path.write_text(json.dumps(metrics, indent=2, ensure_ascii=False), encoding="utf-8")
+    _write_predictions_csv(
+        predictions_csv,
+        case_ids,
+        target_column,
+        targets,
+        predictions,
+        eval_indices,
+        uncertainty_payload,
+    )
+    metrics_path.write_text(
+        json.dumps(metrics, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     with model_path.open("wb") as handle:
         pickle.dump(model, handle)
-    _plot_prediction_vs_truth(plot_path, target_column, targets, predictions, eval_indices, uncertainty_payload)
-    report_path.write_text(_surrogate_report(metrics, predictions_csv, plot_path), encoding="utf-8")
+    _plot_prediction_vs_truth(
+        plot_path,
+        target_column,
+        targets,
+        predictions,
+        eval_indices,
+        uncertainty_payload,
+    )
+    report_path.write_text(
+        _surrogate_report(metrics, predictions_csv, plot_path), encoding="utf-8"
+    )
 
     return SurrogateRun(
         run_dir=run_dir,
@@ -339,14 +406,28 @@ def _fit_and_predict(
     n_samples = len(targets)
     if n_samples >= 4:
         indices = np.arange(n_samples)
-        train_idx, test_idx = train_test_split(indices, test_size=max(1, math.ceil(n_samples * 0.25)), random_state=random_state)
+        train_idx, test_idx = train_test_split(
+            indices,
+            test_size=max(1, math.ceil(n_samples * 0.25)),
+            random_state=random_state,
+        )
         model.fit([feature_dicts[int(idx)] for idx in train_idx], targets[train_idx])
         predictions = model.predict(feature_dicts)
-        return model, np.asarray(predictions, dtype=float), [int(idx) for idx in test_idx], "holdout"
+        return (
+            model,
+            np.asarray(predictions, dtype=float),
+            [int(idx) for idx in test_idx],
+            "holdout",
+        )
 
     model.fit(feature_dicts, targets)
     predictions = model.predict(feature_dicts)
-    return model, np.asarray(predictions, dtype=float), list(range(n_samples)), "training_set_only"
+    return (
+        model,
+        np.asarray(predictions, dtype=float),
+        list(range(n_samples)),
+        "training_set_only",
+    )
 
 
 def _estimator(model_name: str, random_state: int) -> Any:
@@ -368,11 +449,16 @@ def _estimator(model_name: str, random_state: int) -> Any:
         )
     if model_name == "gbr":
         from sklearn.ensemble import GradientBoostingRegressor
+
         return GradientBoostingRegressor(
-            n_estimators=200, max_depth=4, learning_rate=0.05,
+            n_estimators=200,
+            max_depth=4,
+            learning_rate=0.05,
             random_state=random_state,
         )
-    return RandomForestRegressor(n_estimators=200, random_state=random_state, min_samples_leaf=1)
+    return RandomForestRegressor(
+        n_estimators=200, random_state=random_state, min_samples_leaf=1
+    )
 
 
 def _cross_validation_metrics(
@@ -390,11 +476,24 @@ def _cross_validation_metrics(
             "cv_note": "Too few samples for K-fold CV.",
         }
     folds = min(5, len(targets))
-    pipeline = Pipeline([("vectorizer", DictVectorizer(sparse=False)), ("estimator", _estimator(model_name, random_state))])
+    pipeline = Pipeline(
+        [
+            ("vectorizer", DictVectorizer(sparse=False)),
+            ("estimator", _estimator(model_name, random_state)),
+        ]
+    )
     cv = KFold(n_splits=folds, shuffle=True, random_state=random_state)
     try:
-        mae = -cross_val_score(pipeline, feature_dicts, targets, cv=cv, scoring="neg_mean_absolute_error")
-        rmse = -cross_val_score(pipeline, feature_dicts, targets, cv=cv, scoring="neg_root_mean_squared_error")
+        mae = -cross_val_score(
+            pipeline, feature_dicts, targets, cv=cv, scoring="neg_mean_absolute_error"
+        )
+        rmse = -cross_val_score(
+            pipeline,
+            feature_dicts,
+            targets,
+            cv=cv,
+            scoring="neg_root_mean_squared_error",
+        )
     except Exception as exc:
         return {
             "cv_folds": folds,
@@ -409,7 +508,9 @@ def _cross_validation_metrics(
     r2_folds = min(5, max(2, len(targets) // 2))
     try:
         r2_cv = KFold(n_splits=r2_folds, shuffle=True, random_state=random_state)
-        r2_values = cross_val_score(pipeline, feature_dicts, targets, cv=r2_cv, scoring="r2")
+        r2_values = cross_val_score(
+            pipeline, feature_dicts, targets, cv=r2_cv, scoring="r2"
+        )
         finite_r2 = r2_values[np.isfinite(r2_values)]
         if len(finite_r2):
             cv_r2_mean = float(np.mean(finite_r2))
@@ -444,7 +545,9 @@ def _prediction_uncertainty(
             if not isinstance(estimator, RandomForestRegressor):
                 return None
             x_vec = vectorizer.transform(feature_dicts)
-            tree_predictions = np.asarray([tree.predict(x_vec) for tree in estimator.estimators_], dtype=float)
+            tree_predictions = np.asarray(
+                [tree.predict(x_vec) for tree in estimator.estimators_], dtype=float
+            )
             std = np.std(tree_predictions, axis=0)
             mean = np.mean(tree_predictions, axis=0)
             return {"std": std, "lower": mean - 1.64 * std, "upper": mean + 1.64 * std}
@@ -453,14 +556,21 @@ def _prediction_uncertainty(
     return None
 
 
-def _uncertainty_metrics(targets: np.ndarray, payload: dict[str, np.ndarray] | None) -> dict[str, Any]:
+def _uncertainty_metrics(
+    targets: np.ndarray, payload: dict[str, np.ndarray] | None
+) -> dict[str, Any]:
     if not payload or "lower" not in payload or "upper" not in payload:
-        return {"prediction_interval_mean_half_width": None, "prediction_interval_coverage": None}
+        return {
+            "prediction_interval_mean_half_width": None,
+            "prediction_interval_coverage": None,
+        }
     lower = payload["lower"]
     upper = payload["upper"]
     return {
         "prediction_interval_mean_half_width": float(np.mean((upper - lower) / 2.0)),
-        "prediction_interval_coverage": float(np.mean((targets >= lower) & (targets <= upper))),
+        "prediction_interval_coverage": float(
+            np.mean((targets >= lower) & (targets <= upper))
+        ),
     }
 
 
@@ -537,6 +647,51 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
+def _governed_training_rows(
+    rows: list[dict[str, str]],
+) -> tuple[list[dict[str, str]], list[str], dict[str, Any]]:
+    """Filter explicit quality failures and reject mixed physical unit systems."""
+
+    has_quality_gate = "training_eligible" in rows[0]
+    eligible: list[dict[str, str]] = []
+    skipped: list[str] = []
+    for row in rows:
+        if has_quality_gate and str(
+            row.get("training_eligible", "")
+        ).strip().lower() not in {
+            "1",
+            "true",
+            "yes",
+        }:
+            skipped.append(row.get("case_id", ""))
+            continue
+        eligible.append(row)
+
+    unit_systems = {
+        str(row.get("unit_system", "")).strip()
+        for row in eligible
+        if str(row.get("unit_system", "")).strip()
+    }
+    if has_quality_gate and any(
+        not str(row.get("unit_system", "")).strip() for row in eligible
+    ):
+        raise ValueError("Training-eligible rows must declare a unit_system.")
+    if len(unit_systems) > 1:
+        raise ValueError(
+            "Mixed unit systems are not supported in one surrogate dataset: "
+            + ", ".join(sorted(unit_systems))
+        )
+    governance = {
+        "mode": "quality_gate_v1" if has_quality_gate else "legacy_unverified",
+        "input_row_count": len(rows),
+        "eligible_row_count": len(eligible),
+        "skipped_row_count": len(skipped),
+        "unit_system": next(iter(unit_systems), "unknown"),
+        "mixed_units": False,
+    }
+    return eligible, skipped, governance
+
+
 def _to_float(value: Any) -> float | None:
     if value is None:
         return None
@@ -549,7 +704,12 @@ def _to_float(value: Any) -> float | None:
         return None
 
 
-def _write_features_csv(path: Path, case_ids: list[str], feature_dicts: list[dict[str, Any]], feature_names: list[str]) -> None:
+def _write_features_csv(
+    path: Path,
+    case_ids: list[str],
+    feature_dicts: list[dict[str, Any]],
+    feature_names: list[str],
+) -> None:
     columns = ["case_id"] + feature_names
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=columns)
@@ -560,7 +720,9 @@ def _write_features_csv(path: Path, case_ids: list[str], feature_dicts: list[dic
             writer.writerow(row)
 
 
-def _write_targets_csv(path: Path, case_ids: list[str], target_column: str, targets: np.ndarray) -> None:
+def _write_targets_csv(
+    path: Path, case_ids: list[str], target_column: str, targets: np.ndarray
+) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=["case_id", target_column])
         writer.writeheader()
@@ -578,7 +740,15 @@ def _write_predictions_csv(
     uncertainty_payload: dict[str, np.ndarray] | None = None,
 ) -> None:
     eval_set = set(eval_indices)
-    columns = ["case_id", "truth", "prediction", "predicted", "error", "relative_error", "evaluated"]
+    columns = [
+        "case_id",
+        "truth",
+        "prediction",
+        "predicted",
+        "error",
+        "relative_error",
+        "evaluated",
+    ]
     if uncertainty_payload:
         if "std" in uncertainty_payload:
             columns.append("prediction_std")
@@ -589,9 +759,13 @@ def _write_predictions_csv(
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=columns)
         writer.writeheader()
-        for idx, (case_id, truth, pred) in enumerate(zip(case_ids, targets, predictions)):
+        for idx, (case_id, truth, pred) in enumerate(
+            zip(case_ids, targets, predictions)
+        ):
             error = float(pred) - float(truth)
-            relative = abs(error) / abs(float(truth)) if abs(float(truth)) > 1e-12 else ""
+            relative = (
+                abs(error) / abs(float(truth)) if abs(float(truth)) > 1e-12 else ""
+            )
             row = {
                 "case_id": case_id,
                 "truth": float(truth),
@@ -621,18 +795,40 @@ def _plot_prediction_vs_truth(
 ) -> None:
     fig, ax = plt.subplots(figsize=(6, 5), dpi=140)
     if uncertainty_payload and "std" in uncertainty_payload:
-        ax.errorbar(targets, predictions, yerr=uncertainty_payload["std"], fmt="o", color="#2563eb", ecolor="#93c5fd", label="cases")
+        ax.errorbar(
+            targets,
+            predictions,
+            yerr=uncertainty_payload["std"],
+            fmt="o",
+            color="#2563eb",
+            ecolor="#93c5fd",
+            label="cases",
+        )
     else:
         ax.scatter(targets, predictions, color="#2563eb", label="cases")
     eval_targets = targets[eval_indices]
     eval_predictions = predictions[eval_indices]
-    ax.scatter(eval_targets, eval_predictions, facecolors="none", edgecolors="#dc2626", s=90, label="evaluated")
+    ax.scatter(
+        eval_targets,
+        eval_predictions,
+        facecolors="none",
+        edgecolors="#dc2626",
+        s=90,
+        label="evaluated",
+    )
     lower = float(min(np.min(targets), np.min(predictions)))
     upper = float(max(np.max(targets), np.max(predictions)))
     if abs(upper - lower) < 1e-12:
         lower -= 1.0
         upper += 1.0
-    ax.plot([lower, upper], [lower, upper], color="#111827", linewidth=1.2, linestyle="--", label="ideal")
+    ax.plot(
+        [lower, upper],
+        [lower, upper],
+        color="#111827",
+        linewidth=1.2,
+        linestyle="--",
+        label="ideal",
+    )
     ax.set_xlabel("Truth")
     ax.set_ylabel("Prediction")
     ax.set_title(f"Surrogate prediction: {target_column}")
@@ -646,7 +842,9 @@ def _plot_prediction_vs_truth(
     plt.close(fig)
 
 
-def _surrogate_report(metrics: dict[str, Any], predictions_csv: Path, plot_path: Path) -> str:
+def _surrogate_report(
+    metrics: dict[str, Any], predictions_csv: Path, plot_path: Path
+) -> str:
     return f"""# 代理模型训练报告
 
 ## 基本信息
@@ -718,21 +916,34 @@ def _normalize_uncertainty(value: str) -> str:
     return normalized
 
 
-def _unique_run_dir(output_root: Path, dataset_name: str, target_column: str, model_kind: str) -> Path:
+def _unique_run_dir(
+    output_root: Path, dataset_name: str, target_column: str, model_kind: str
+) -> Path:
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    base = output_root / f"{stamp}_{_safe_name(dataset_name)}_{_safe_name(target_column)}_{model_kind}"
+    base = (
+        output_root
+        / f"{stamp}_{_safe_name(dataset_name)}_{_safe_name(target_column)}_{model_kind}"
+    )
     if not base.exists():
         return base
     idx = 2
     while True:
-        candidate = output_root / f"{stamp}_{_safe_name(dataset_name)}_{_safe_name(target_column)}_{model_kind}_{idx}"
+        candidate = (
+            output_root
+            / f"{stamp}_{_safe_name(dataset_name)}_{_safe_name(target_column)}_{model_kind}_{idx}"
+        )
         if not candidate.exists():
             return candidate
         idx += 1
 
 
 def _safe_name(value: str) -> str:
-    return "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in value).strip("_") or "surrogate"
+    return (
+        "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in value).strip(
+            "_"
+        )
+        or "surrogate"
+    )
 
 
 def _comparison_sort_key(row: dict[str, Any]) -> tuple[Any, ...]:
@@ -740,4 +951,10 @@ def _comparison_sort_key(row: dict[str, Any]) -> tuple[Any, ...]:
     mae = row.get("mae")
     rmse_key = float(rmse) if isinstance(rmse, (int, float)) else float("inf")
     mae_key = float(mae) if isinstance(mae, (int, float)) else float("inf")
-    return (str(row.get("dataset_dir", "")), str(row.get("target_column", "")), rmse_key, mae_key, str(row.get("model_kind", "")))
+    return (
+        str(row.get("dataset_dir", "")),
+        str(row.get("target_column", "")),
+        rmse_key,
+        mae_key,
+        str(row.get("model_kind", "")),
+    )

@@ -12,10 +12,13 @@ from material_ai_workbench.desktop_launcher import (
     configure_desktop_environment,
     find_available_port,
     log_tail,
+    verify_native_window_runtime,
 )
 
 
-def test_configure_desktop_environment_uses_writable_user_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_configure_desktop_environment_uses_writable_user_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     for name in (
         "MATERIALAI_WORKSPACE_ROOT",
         "MATERIALAI_ENV_FILE",
@@ -48,7 +51,9 @@ def test_requested_busy_port_is_rejected() -> None:
             find_available_port(port)
 
 
-def test_source_backend_command_uses_module_entrypoint(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_source_backend_command_uses_module_entrypoint(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.delattr("sys.frozen", raising=False)
     command = backend_command(50123)
     assert command[1:4] == ["-m", "material_ai_workbench.desktop_launcher", "--serve"]
@@ -60,3 +65,19 @@ def test_log_tail_limits_output(tmp_path: Path) -> None:
     log.write_text("\n".join(f"line-{index}" for index in range(30)), encoding="utf-8")
     tail = log_tail(log, max_lines=3)
     assert tail.splitlines() == ["line-27", "line-28", "line-29"]
+
+
+def test_native_window_runtime_failure_is_actionable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("material_ai_workbench.desktop_launcher.os.name", "nt")
+
+    def fail_import(name: str) -> None:
+        raise FileNotFoundError("Microsoft.Web.WebView2.Core.dll")
+
+    monkeypatch.setattr(
+        "material_ai_workbench.desktop_launcher.importlib.import_module", fail_import
+    )
+
+    with pytest.raises(DesktopLaunchError, match="桌面窗口运行库不完整"):
+        verify_native_window_runtime()

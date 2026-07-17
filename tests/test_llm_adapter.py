@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from material_ai_workbench.llm_adapter import LlmChatConfig, LlmConfigError, plan_task_with_llm
+from material_ai_workbench.llm_adapter import (
+    LlmChatConfig,
+    LlmConfigError,
+    plan_task_with_llm,
+)
 from material_ai_workbench.nl_tasks import task_from_dict
 
 
@@ -13,11 +17,7 @@ def test_plan_task_with_llm_parses_openai_compatible_response(monkeypatch) -> No
         assert url == "http://localhost:9999/v1/chat/completions"
         assert headers["Authorization"] == "Bearer secret"
         assert payload["model"] == "unit-model"
-        return {
-            "choices": [
-                {
-                    "message": {
-                        "content": """
+        return {"choices": [{"message": {"content": """
                         {
                           "task_type": "material_training_with_abaqus_check",
                           "material": {
@@ -46,11 +46,7 @@ def test_plan_task_with_llm_parses_openai_compatible_response(monkeypatch) -> No
                           "missing": [],
                           "warnings": []
                         }
-                        """
-                    }
-                }
-            ]
-        }
+                        """}}]}
 
     plan = plan_task_with_llm(
         "用 Hill 材料训练并做 Abaqus 验算",
@@ -73,7 +69,11 @@ def test_plan_task_with_llm_parses_openai_compatible_response(monkeypatch) -> No
 
 def test_llm_config_requires_key_by_default(monkeypatch) -> None:
     monkeypatch.delenv("MISSING_LLM_KEY", raising=False)
-    config = LlmChatConfig(base_url="http://localhost:9999/v1", model="unit-model", api_key_env="MISSING_LLM_KEY")
+    config = LlmChatConfig(
+        base_url="http://localhost:9999/v1",
+        model="unit-model",
+        api_key_env="MISSING_LLM_KEY",
+    )
 
     with pytest.raises(LlmConfigError):
         config.validate()
@@ -103,3 +103,109 @@ def test_task_from_dict_falls_back_for_invalid_values() -> None:
     assert task.ml.n_sequence == 2
     assert task.ml.test_size == 20
     assert task.abaqus.timeout_seconds == 60
+
+
+def test_llm_case_grounding_filters_paths_ids_and_submission(monkeypatch) -> None:
+    monkeypatch.setenv("UNIT_TEST_LLM_KEY", "secret")
+    context = {
+        "schema_version": "1.0",
+        "grounding_id": "ground-1",
+        "retrieval_method": "unit-test",
+        "retrieved_case_ids": ["case_hill_plate"],
+        "sensitive_path": "D:/private/do-not-send",
+        "cases": [
+            {
+                "case_id": "case_hill_plate",
+                "title": "Hill plate hole",
+                "units": {"system": "mm-N-s-MPa"},
+                "geometry": {"hole_radius": 5.0},
+                "case_dir": "D:/private/do-not-send",
+            }
+        ],
+    }
+
+    def fake_transport(url, headers, payload, timeout):
+        user_prompt = payload["messages"][1]["content"]
+        assert "case_hill_plate" in user_prompt
+        assert "D:/private/do-not-send" not in user_prompt
+        return {"choices": [{"message": {"content": """
+                        {
+                          "task_type": "case_based_simulation",
+                          "steps": [
+                            {"action": "retrieve_case"},
+                            {"action": "prepare_job"},
+                            {"action": "submit_job"}
+                          ],
+                          "case_plan": {
+                            "objective": "change hole radius",
+                            "reference_case_ids": ["invented_case"],
+                            "changes": [
+                              {"parameter": "hole_radius", "from": 5, "to": 6, "unit": "mm"}
+                            ],
+                            "unit_system": "mm-N-s-MPa",
+                            "submit_job": true
+                          },
+                          "missing": [],
+                          "warnings": []
+                        }
+                        """}}]}
+
+    plan = plan_task_with_llm(
+        "参考历史带孔板案例，把孔径改成 6 mm",
+        LlmChatConfig(
+            base_url="http://localhost:9999/v1",
+            model="unit-model",
+            api_key_env="UNIT_TEST_LLM_KEY",
+        ),
+        transport=fake_transport,
+        case_context=context,
+    )
+
+    assert plan.task_payload["case_plan"]["reference_case_ids"] == ["case_hill_plate"]
+    assert plan.task_payload["case_plan"]["submit_job"] is False
+    assert plan.task_payload["grounding"]["grounding_id"] == "ground-1"
+    assert plan.task_payload["execution_policy"]["abaqus_submission_allowed"] is False
+    assert any("invented_case" in warning for warning in plan.warnings)
+
+
+def test_llm_grounding_keeps_non_case_task_behind_confirmation(monkeypatch) -> None:
+    monkeypatch.setenv("UNIT_TEST_LLM_KEY", "secret")
+    context = {
+        "schema_version": "1.0",
+        "grounding_id": "ground-batch",
+        "retrieval_method": "unit-test",
+        "retrieved_case_ids": [],
+        "cases": [],
+    }
+
+    def fake_transport(url, headers, payload, timeout):
+        return {"choices": [{"message": {"content": """
+                        {
+                          "task_type": "batch_parameter_sweep",
+                          "steps": [{"action": "create_sweep"}],
+                          "batch": {
+                            "name": "grounded_sweep",
+                            "material_type": "j2",
+                            "yield_strengths": [50, 60, 70]
+                          },
+                          "missing": [],
+                          "warnings": []
+                        }
+                        """}}]}
+
+    plan = plan_task_with_llm(
+        "创建屈服强度扫描计划",
+        LlmChatConfig(
+            base_url="http://localhost:9999/v1",
+            model="unit-model",
+            api_key_env="UNIT_TEST_LLM_KEY",
+        ),
+        transport=fake_transport,
+        case_context=context,
+    )
+
+    assert plan.task_payload["execution_policy"] == {
+        "mode": "requires_user_confirmation",
+        "abaqus_submission_allowed": False,
+        "requires_user_confirmation": True,
+    }

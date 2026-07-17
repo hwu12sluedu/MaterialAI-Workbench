@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import ctypes
+import importlib
 import logging
 import os
 import socket
@@ -23,7 +24,6 @@ from dataclasses import dataclass
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Sequence
-
 
 APP_NAME = "MaterialAI Workbench"
 APP_DIRECTORY = "MaterialAIWorkbench"
@@ -112,7 +112,9 @@ def find_available_port(requested_port: int | None = None) -> int:
         try:
             probe.bind(("127.0.0.1", port))
         except OSError as exc:
-            raise DesktopLaunchError(f"端口 {port} 已被占用，请关闭占用程序或换一个端口。") from exc
+            raise DesktopLaunchError(
+                f"端口 {port} 已被占用，请关闭占用程序或换一个端口。"
+            ) from exc
         return int(probe.getsockname()[1])
 
 
@@ -151,7 +153,11 @@ def run_streamlit_server(port: int, *, debug: bool = False) -> int:
         "--server.runOnSave=false",
         "--browser.gatherUsageStats=false",
         "--client.toolbarMode=minimal",
-        "--client.showErrorDetails=none" if not debug else "--client.showErrorDetails=full",
+        (
+            "--client.showErrorDetails=none"
+            if not debug
+            else "--client.showErrorDetails=full"
+        ),
     ]
     result = streamlit_cli.main()
     return int(result or 0)
@@ -202,7 +208,9 @@ def wait_for_backend(
         if return_code is not None:
             raise DesktopLaunchError(f"本地服务提前退出，退出码 {return_code}。")
         try:
-            request = urllib.request.Request(health_url, headers={"User-Agent": APP_NAME})
+            request = urllib.request.Request(
+                health_url, headers={"User-Agent": APP_NAME}
+            )
             with urllib.request.urlopen(request, timeout=1.5) as response:
                 if 200 <= int(response.status) < 300:
                     LOGGER.info("Backend is healthy at %s", url)
@@ -239,6 +247,7 @@ def log_tail(path: Path, *, max_lines: int = 24) -> str:
 
 def run_core_self_check(paths: DesktopPaths) -> None:
     """Exercise the packaged numerical stack with a small material-training run."""
+    verify_native_window_runtime()
     from material_ai_workbench.pipeline import WorkbenchConfig, run_material_workbench
 
     LOGGER.info("Starting packaged J2 material-training self-check")
@@ -262,9 +271,25 @@ def run_core_self_check(paths: DesktopPaths) -> None:
             result.umat_csv,
             result.umat_meta_json,
         )
-        if result.support_vectors <= 0 or not all(path.is_file() for path in required_outputs):
+        if result.support_vectors <= 0 or not all(
+            path.is_file() for path in required_outputs
+        ):
             raise DesktopLaunchError("材料训练自检没有生成完整结果。")
     LOGGER.info("Packaged J2 material-training self-check passed")
+
+
+def verify_native_window_runtime() -> None:
+    """Load the Windows pywebview backend and its bundled WebView2 assemblies."""
+
+    if os.name != "nt":
+        return
+    try:
+        importlib.import_module("webview.platforms.winforms")
+    except Exception as exc:
+        raise DesktopLaunchError(
+            "桌面窗口运行库不完整，请重新下载并完整解压客户端。"
+        ) from exc
+    LOGGER.info("Native WebView runtime self-check passed")
 
 
 class SingleInstanceGuard:
@@ -298,7 +323,9 @@ def open_native_window(url: str, *, debug: bool = False) -> None:
     try:
         import webview
     except Exception as exc:
-        raise DesktopLaunchError("桌面窗口组件加载失败，请查看日志或重新下载完整客户端。") from exc
+        raise DesktopLaunchError(
+            "桌面窗口组件加载失败，请查看日志或重新下载完整客户端。"
+        ) from exc
 
     webview.create_window(
         APP_NAME,
@@ -334,10 +361,22 @@ def show_message(title: str, message: str, *, error: bool = False) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="MaterialAI Workbench Windows desktop client")
-    parser.add_argument("--port", type=int, default=None, help="use a specific localhost port")
-    parser.add_argument("--browser", action="store_true", help="open in the default browser instead of a native window")
-    parser.add_argument("--debug", action="store_true", help="enable verbose desktop and Streamlit diagnostics")
+    parser = argparse.ArgumentParser(
+        description="MaterialAI Workbench Windows desktop client"
+    )
+    parser.add_argument(
+        "--port", type=int, default=None, help="use a specific localhost port"
+    )
+    parser.add_argument(
+        "--browser",
+        action="store_true",
+        help="open in the default browser instead of a native window",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="enable verbose desktop and Streamlit diagnostics",
+    )
     parser.add_argument(
         "--smoke-test",
         action="store_true",
@@ -368,8 +407,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         with SingleInstanceGuard():
             port = find_available_port(args.port)
-            process, server_log_handle = start_backend(port, paths, debug=bool(args.debug))
-            url = wait_for_backend(process, port, timeout_seconds=float(args.startup_timeout))
+            process, server_log_handle = start_backend(
+                port, paths, debug=bool(args.debug)
+            )
+            url = wait_for_backend(
+                process, port, timeout_seconds=float(args.startup_timeout)
+            )
             if args.smoke_test:
                 run_core_self_check(paths)
                 LOGGER.info("Desktop smoke test passed")

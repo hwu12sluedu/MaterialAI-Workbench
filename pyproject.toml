@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "materialai-workbench"
-version = "0.3.0"
+version = "0.4.0a1"
 description = "Local engineering workbench for material models, Abaqus workflows and simulation data"
 authors = [
   { name = "Han Wu", email = "wuhan0314@163.com" }
@@ -52,6 +52,8 @@ materialai-metal-closed-loop = "material_ai_workbench.run_metal_closed_loop:main
 materialai-product-closed-loop = "material_ai_workbench.run_product_closed_loop:main"
 materialai-diagnostics = "material_ai_workbench.abaqus_diagnostics:main"
 materialai-plate-hole = "material_ai_workbench.plate_hole_acceptance:main"
+materialai-plate-hole-batch = "material_ai_workbench.plate_hole_batch:main"
+materialai-case = "material_ai_workbench.case_cli:main"
 
 [tool.setuptools]
 packages = [

@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+## 0.4.0-alpha.1 - 2026-07-17
+
+### Added
+
+- Versioned `case_package.json` v2 with bounded file fingerprints, provenance, units, solver evidence and machine-readable quality gates.
+- Explainable similar-case retrieval across material, geometry, loading, mesh, units, results and text evidence.
+- Local case grounding for OpenAI-compatible planners; unknown case IDs, local paths and automatic Abaqus submission are rejected.
+- Read-only case reuse workspaces containing copied editable inputs, parameter-difference reviews and non-submitted execution manifests.
+- Resumable 3D plate-hole batch plans over hole radius, yield strength and displacement, with governed dataset export and RF/MLP/GBR comparison.
+- `materialai-case` and `materialai-plate-hole-batch` command-line tools plus dedicated desktop pages.
+
+### Changed
+
+- Training dataset export can include only cases that pass solver, unit, material, mesh and numeric-target quality gates.
+- Surrogate training filters explicit quality failures, rejects mixed unit systems and excludes governance metadata from model features.
+- Plate-hole acceptance archives canonical geometry/loading/material parameters and the explicit `mm-N-s-MPa` unit system.
+
+### Fixed
+
+- Abaqus convergence text such as `residual error estimate` is no longer treated as a fatal solver error.
+- LLM task types outside material training no longer need to rely on ungrounded historical-case assumptions.
+
+### Release boundaries
+
+- This is an alpha release. Case-based planning copies inputs and writes a review plan; it does not automatically edit arbitrary INP geometry.
+- Batch samples are training truth only after real Abaqus completion, ODB extraction, case archival and quality-gate approval.
+- Neural-network surrogate metrics require adequate samples and independent Abaqus validation before engineering use.
+
 ## 0.3.0 - 2026-07-15
 
 ### Added

@@ -35,10 +35,11 @@
 | 系统诊断 | 分别检查用户工作区、Abaqus 批处理运行时、SMAPython 与 MCP 实时桥接 |
 | Abaqus 验证 | UMAT 单元验算、INP/脚本生成、Job 队列、ODB 场变量与帧序列提取 |
 | 三维验收算例 | 带孔板参数化建模、真实 Job、ODB 特征、工程检查、断点恢复和案例归档 |
+| 带孔板批量 | 孔径/屈服强度/位移参数矩阵、可恢复 Abaqus 样本、质量门数据集、RF/MLP/GBR 对比 |
 | CAE 实时连接 | 通过 Abaqus MCP Socket Bridge 查询模型和 Job、提交作业、读取 ODB、保存视口截图 |
 | 复合材料 | 带取向的 Fiber/Interface/Matrix 三相体素 RVE、六工况数据准备、三维带孔板验证脚本 |
-| 案例与模型 | 索引 INP/ODB/CSV/报告，提取特征，导出训练集，管理材料预设和代理模型 |
-| 任务输入 | 本地规则解析默认可用；外部语言模型是可选的结构化任务解析器，不能直接执行任意脚本 |
+| 案例与模型 | `case_package.json` v2、文件指纹、求解证据、显式单位、可解释相似案例和训练质量门 |
+| 任务输入 | 本地规则解析默认可用；外部模型可引用本地检索案例生成受约束计划，不能直接执行任意脚本或自动提交 Job |
 
 ![取向纤维 RVE 与带孔板闭环](docs/assets/materialai-rve-closed-loop.png)
 
@@ -64,6 +65,8 @@
 详细说明见 [Abaqus MCP 使用指南](docs/ABAQUS_MCP_WORKBENCH_CN.md)。
 
 三维带孔板闭环可先准备、再显式提交，并严格区分 `prepared`、`built`、`solved`、`validated` 和 `archived`。操作与实机基线见 [Abaqus 三维带孔板闭环](docs/ABAQUS_CLOSED_LOOP_V03_CN.md)。
+
+案例智能、自然语言复用和 3D 带孔板批量代理模型见 [v0.4 案例智能与批量仿真](docs/V04_CASE_INTELLIGENCE_CN.md)。
 
 ## 从源码运行
 
@@ -100,6 +103,7 @@ python -m build
 - [Windows 客户端使用与排错](docs/DESKTOP_CLIENT_CN.md)
 - [功能边界与验收说明](docs/CAPABILITY_BOUNDARIES_CN.md)
 - [Abaqus 三维带孔板闭环](docs/ABAQUS_CLOSED_LOOP_V03_CN.md)
+- [v0.4 案例智能与批量仿真](docs/V04_CASE_INTELLIGENCE_CN.md)
 - [功能软件测试清单](docs/testing/FUNCTIONAL_TEST_CHECKLIST_CN.md)
 - [独立黑盒 QA 仓库](https://github.com/hwu12sluedu/MaterialAI-Workbench-QA)
 - [案例库使用指南](docs/CASE_LIBRARY_USER_GUIDE_CN.md)

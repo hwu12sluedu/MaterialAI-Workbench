@@ -69,6 +69,12 @@ from material_ai_workbench.case_library import (
     result_feature_table_rows,
     scan_case_folder,
 )
+from material_ai_workbench.case_based_workflow import prepare_case_based_plan
+from material_ai_workbench.case_intelligence import (
+    build_case_grounding_context,
+    search_cases_by_text,
+)
+from material_ai_workbench.case_package import evaluate_case_quality, quality_table_rows
 from material_ai_workbench.closed_loop_report import (
     CLOSED_LOOP_ROOT,
     generate_closed_loop_report,
@@ -156,6 +162,14 @@ from material_ai_workbench.plate_hole_acceptance import (
     resume_plate_hole_acceptance,
     run_plate_hole_acceptance,
 )
+from material_ai_workbench.plate_hole_batch import (
+    PlateHoleBatchConfig,
+    batch_table_rows as plate_hole_batch_table_rows,
+    create_plate_hole_batch_plan,
+    list_plate_hole_batch_plans,
+    load_plate_hole_batch_plan,
+    run_plate_hole_batch_plan,
+)
 from material_ai_workbench.task_schema import (
     build_executable_plan,
     dry_run_summary,
@@ -223,6 +237,7 @@ def main() -> None:
         "mcp": "Abaqus MCP",
         "abaqus": "Abaqus 验算",
         "acceptance": "带孔板验证",
+        "plate_batch": "带孔板批量",
         "composite": "复合材料 RVE",
         "batch": "批量仿真",
         "results": "结果浏览",
@@ -252,6 +267,8 @@ def main() -> None:
         _abaqus_panel(selected_run)
     elif page_key == "acceptance":
         _plate_hole_acceptance_panel()
+    elif page_key == "plate_batch":
+        _plate_hole_batch_panel()
     elif page_key == "composite":
         _composite_panel()
     elif page_key == "batch":
@@ -408,6 +425,11 @@ def _ai_task_panel() -> None:
         prompt = st.text_area(
             "描述你的仿真任务", value=default_prompt, height=180, key="nl_task_prompt"
         )
+        use_case_grounding = st.checkbox(
+            "参考本地历史案例库",
+            value=True,
+            key="nl_use_case_grounding",
+        )
         parse_clicked = st.button(
             "解析任务", type="primary", use_container_width=True, key="ai_parse_task"
         )
@@ -424,6 +446,7 @@ def _ai_task_panel() -> None:
             st.session_state.pop("nl_task_payload", None)
             st.session_state.pop("nl_task_payload_source", None)
             st.session_state.pop("nl_llm_raw_text", None)
+            st.session_state.pop("nl_case_grounding", None)
 
         if llm_clicked:
             if not allow_llm:
@@ -433,9 +456,15 @@ def _ai_task_panel() -> None:
                     apply_llm_config(
                         llm_config, api_key_value=llm_api_key_value or None
                     )
+                    case_context = (
+                        build_case_grounding_context(prompt, top_k=3)
+                        if use_case_grounding
+                        else None
+                    )
                     llm_plan = plan_task_with_llm(
                         prompt,
                         llm_config,
+                        case_context=case_context,
                     )
                 except (LlmConfigError, LlmResponseError, Exception) as exc:
                     st.error(f"模型解析失败：{exc}")
@@ -443,13 +472,78 @@ def _ai_task_panel() -> None:
                     st.session_state["nl_task_payload"] = llm_plan.task_payload
                     st.session_state["nl_task_payload_source"] = prompt
                     st.session_state["nl_llm_raw_text"] = llm_plan.raw_text
+                    st.session_state["nl_case_grounding"] = case_context
                     st.success("模型任务 JSON 已生成")
 
         task_source = "规则解析"
         task_payload = st.session_state.get("nl_task_payload")
-        if (
+        task_payload_matches_prompt = bool(
             isinstance(task_payload, dict)
             and st.session_state.get("nl_task_payload_source") == prompt
+        )
+        if (
+            task_payload_matches_prompt
+            and str(task_payload.get("task_type", "")).strip()
+            == "case_based_simulation"
+        ):
+            st.caption("当前解析来源：语言模型 + 本地案例检索")
+            grounding = st.session_state.get("nl_case_grounding") or {}
+            grounded_cases = grounding.get("cases", []) if grounding else []
+            if grounded_cases:
+                st.markdown("**本地检索证据**")
+                st.dataframe(
+                    [
+                        {
+                            "Case ID": item.get("case_id"),
+                            "标题": item.get("title"),
+                            "检索分": item.get("retrieval_score"),
+                            "执行状态": item.get("execution_state"),
+                            "可训练": "是" if item.get("training_eligible") else "否",
+                            "单位制": (item.get("units") or {}).get("system", ""),
+                        }
+                        for item in grounded_cases
+                    ],
+                    use_container_width=True,
+                    hide_index=True,
+                )
+            else:
+                st.warning("本地案例库未检索到可引用案例，当前计划不能生成复用工作区。")
+            st.json(task_payload)
+            for warning in (
+                task_payload.get("warnings", [])
+                if isinstance(task_payload.get("warnings"), list)
+                else []
+            ):
+                st.warning(str(warning))
+            plan_preview = build_executable_plan(task_payload)
+            st.dataframe(
+                [
+                    {
+                        "步骤": step.index,
+                        "动作": step.label,
+                        "需要 Abaqus": "是" if step.requires_abaqus else "否",
+                        "状态": step.status,
+                    }
+                    for step in plan_preview.steps
+                ],
+                use_container_width=True,
+                hide_index=True,
+            )
+            st.info(
+                "执行该计划只会复制可编辑输入并生成差异审查单，不修改历史案例，也不提交 Abaqus。"
+            )
+            if execute_clicked:
+                try:
+                    prepared = prepare_case_based_plan(task_payload)
+                except Exception as exc:
+                    st.error(f"历史案例复用工作区生成失败：{exc}")
+                else:
+                    st.success(f"复用工作区已生成：{prepared.run_dir}")
+                    st.caption(f"差异审查单：`{prepared.review_path}`")
+                    st.caption(f"计划清单：`{prepared.manifest_path}`")
+            return
+        if (
+            task_payload_matches_prompt
             and str(task_payload.get("task_type", "")).strip() == "composite_plate_hole"
         ):
             task_source = "语言模型解析"
@@ -496,6 +590,24 @@ def _ai_task_panel() -> None:
                 _execute_composite_ai_task(
                     task_payload, allow_abaqus=bool(allow_abaqus)
                 )
+            return
+
+        special_task_types = {
+            "batch_parameter_sweep",
+            "case_library_query",
+            "surrogate_training",
+            "odb_extraction",
+            "closed_loop_report",
+        }
+        if (
+            task_payload_matches_prompt
+            and str(task_payload.get("task_type", "")).strip() in special_task_types
+        ):
+            _render_special_ai_task(
+                task_payload,
+                source_text=prompt,
+                execute_clicked=bool(execute_clicked),
+            )
             return
 
         if task_payload and st.session_state.get("nl_task_payload_source") == prompt:
@@ -576,6 +688,164 @@ def _ai_task_panel() -> None:
                     _show_abaqus_summary(bridge_result.work_dir)
                 else:
                     st.info("任务已完成材料训练；Abaqus 验算未执行，因为尚未勾选确认。")
+
+
+def _render_special_ai_task(
+    payload: dict[str, Any], *, source_text: str, execute_clicked: bool
+) -> None:
+    """Render and safely dispatch non-material tasks emitted by an LLM."""
+
+    task_type = str(payload.get("task_type", "")).strip()
+    st.caption("当前解析来源：语言模型解析")
+    st.json(payload)
+    for warning in (
+        payload.get("warnings", []) if isinstance(payload.get("warnings"), list) else []
+    ):
+        st.warning(str(warning))
+
+    dry_payload = merge_with_defaults(payload)
+    schema_result = validate_task_payload(dry_payload)
+    with st.expander("Dry-Run 预览（执行前检查）", expanded=True):
+        st.markdown(dry_run_summary(dry_payload, schema_result))
+        plan = build_executable_plan(dry_payload)
+        st.dataframe(
+            [
+                {
+                    "步骤": step.index,
+                    "动作": step.label,
+                    "需要 Abaqus": "是" if step.requires_abaqus else "否",
+                    "状态": step.status,
+                }
+                for step in plan.steps
+            ],
+            use_container_width=True,
+            hide_index=True,
+            height=min(260, 42 + 30 * max(1, len(plan.steps))),
+        )
+    if not schema_result.valid:
+        st.error("任务字段不完整，已阻止执行。请修改描述后重新解析。")
+        return
+
+    if task_type == "odb_extraction":
+        st.info(
+            "ODB 提取只允许从案例库中选择已归档文件，以保证 Case ID、单位和结果来源可追溯。"
+        )
+        if execute_clicked:
+            st.warning("未读取任意路径。请进入“案例库”，选择案例后执行 ODB 提取。")
+        return
+
+    if not execute_clicked:
+        return
+
+    try:
+        if task_type == "batch_parameter_sweep":
+            _execute_ai_batch_plan(payload)
+        elif task_type == "case_library_query":
+            _execute_ai_case_query(payload, source_text=source_text)
+        elif task_type == "surrogate_training":
+            _execute_ai_surrogate_training(payload)
+        elif task_type == "closed_loop_report":
+            report = generate_closed_loop_report()
+            st.session_state["selected_closed_loop_report"] = str(report.report_dir)
+            st.success(f"闭环报告已生成：{report.report_dir}")
+            st.caption(f"报告：`{report.report_path}`")
+    except Exception as exc:
+        st.error(f"任务执行失败：{type(exc).__name__}: {exc}")
+
+
+def _execute_ai_batch_plan(payload: dict[str, Any]) -> None:
+    batch = payload.get("batch") if isinstance(payload.get("batch"), dict) else {}
+    raw_values = batch.get("yield_strengths", [])
+    if not isinstance(raw_values, list):
+        raise ValueError("yield_strengths 必须是数值列表。")
+    yield_strengths = [float(value) for value in raw_values]
+    if not yield_strengths:
+        raise ValueError("yield_strengths 不能为空。")
+    plan = create_parameter_sweep_plan(
+        name=_payload_text(batch, "name", "ai_parameter_sweep"),
+        material_type=_payload_text(batch, "material_type", "j2"),
+        yield_strengths=yield_strengths,
+    )
+    st.session_state["selected_batch_plan"] = str(plan.plan_dir)
+    st.success(f"批量计划已创建：{plan.plan_dir}")
+    st.info("本次只创建计划，没有训练样本，也没有提交 Abaqus。")
+    st.dataframe(
+        batch_sample_table_rows(plan), use_container_width=True, hide_index=True
+    )
+
+
+def _execute_ai_case_query(payload: dict[str, Any], *, source_text: str) -> None:
+    query_section = (
+        payload.get("query") if isinstance(payload.get("query"), dict) else {}
+    )
+    filters = query_section.get("filters", {})
+    filter_text = json.dumps(filters, ensure_ascii=False) if filters else ""
+    rows = search_cases_by_text(
+        f"{source_text} {filter_text}".strip(),
+        top_k=10,
+        training_eligible_only=bool(query_section.get("training_eligible_only", False)),
+    )
+    if not rows:
+        st.warning("没有检索到匹配案例。")
+        return
+    st.success(f"检索到 {len(rows)} 个案例")
+    st.dataframe(
+        [
+            {
+                "Case ID": row["case_id"],
+                "标题": row["title"],
+                "相关度": round(float(row["score"]), 4),
+                "命中词": ", ".join(row["matched_terms"]),
+                "执行状态": row["execution_state"],
+                "可训练": "是" if row["training_eligible"] else "否",
+            }
+            for row in rows
+        ],
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
+def _execute_ai_surrogate_training(payload: dict[str, Any]) -> None:
+    surrogate = (
+        payload.get("surrogate") if isinstance(payload.get("surrogate"), dict) else {}
+    )
+    requested = _payload_text(surrogate, "dataset_dir", "")
+    exports = list_dataset_exports()
+    allowed = {str(path.resolve()): path.resolve() for path in exports}
+    requested_path = Path(requested).expanduser().resolve() if requested else None
+    if requested_path is None or str(requested_path) not in allowed:
+        raise ValueError(
+            "dataset_dir 必须精确指向应用已登记的数据集导出目录；请先在“代理模型”页选择数据集。"
+        )
+    models = surrogate.get("models", ["random_forest", "mlp", "gbr"])
+    if not isinstance(models, list):
+        raise ValueError("models 必须是模型名称列表。")
+    normalized_models = [str(value).strip().lower() for value in models]
+    allowed_models = {"random_forest", "mlp", "gbr"}
+    if not normalized_models or any(
+        model not in allowed_models for model in normalized_models
+    ):
+        raise ValueError("models 仅支持 random_forest、mlp 和 gbr。")
+    target = _payload_text(surrogate, "target_column", DEFAULT_TARGET)
+    rows = []
+    for model in dict.fromkeys(normalized_models):
+        run = train_surrogate_from_dataset(
+            requested_path,
+            target_column=target,
+            model_kind=model,
+        )
+        rows.append(
+            {
+                "模型": model,
+                "MAE": run.metrics.get("mae"),
+                "RMSE": run.metrics.get("rmse"),
+                "R2": run.metrics.get("r2"),
+                "运行目录": str(run.run_dir),
+            }
+        )
+    st.success(f"已完成 {len(rows)} 个代理模型训练")
+    st.dataframe(rows, use_container_width=True, hide_index=True)
 
 
 def _execute_composite_ai_task(payload: dict[str, Any], *, allow_abaqus: bool) -> None:
@@ -1208,10 +1478,30 @@ def _case_library_panel() -> None:
         title = st.text_input("案例标题", value="Abaqus 仿真案例", key="case_title")
         tags = st.text_input("标签", value="Abaqus, 成功案例", key="case_tags")
         status = st.selectbox(
-            "状态",
+            "人工状态",
             ["success", "candidate", "failed", "needs_review"],
             index=0,
             key="case_status",
+        )
+        unit_option = st.selectbox(
+            "Abaqus 单位制",
+            ["mm-N-s-MPa", "SI-m-kg-s-Pa", "未声明（仅归档）", "自定义"],
+            index=0,
+            key="case_unit_system",
+        )
+        custom_unit_system = ""
+        if unit_option == "自定义":
+            custom_unit_system = st.text_input(
+                "自定义单位制名称",
+                value="",
+                placeholder="例如 mm-kN-s-GPa",
+                key="case_custom_unit_system",
+            )
+        solver_version = st.text_input(
+            "Abaqus 版本（可选）",
+            value="",
+            placeholder="例如 2024",
+            key="case_solver_version",
         )
         description = st.text_area(
             "案例说明",
@@ -1232,6 +1522,7 @@ def _case_library_panel() -> None:
 
         if scan_clicked:
             try:
+                declared_units = _selected_case_units(unit_option, custom_unit_system)
                 with st.spinner("正在扫描案例并生成案例摘要..."):
                     summary = scan_case_folder(
                         source_folder,
@@ -1241,9 +1532,19 @@ def _case_library_panel() -> None:
                         status=status,
                         lessons_learned=lessons,
                         next_actions=next_actions,
+                        units=declared_units,
+                        solver_version=solver_version,
                     )
                 st.session_state["selected_case_dir"] = summary.case_dir
                 st.success(f"案例已归档：{summary.case_id}")
+                quality = getattr(summary, "quality", {}) or evaluate_case_quality(
+                    summary
+                )
+                if quality.get("training_eligible"):
+                    st.success("质量门通过：该案例可进入训练数据集。")
+                else:
+                    blockers = ", ".join(quality.get("blocking_reasons", []))
+                    st.warning(f"案例仅完成归档，暂不可训练：{blockers}")
                 st.write(summary.case_dir)
             except Exception as exc:
                 st.error(f"案例归档失败：{exc}")
@@ -1298,6 +1599,10 @@ def _case_library_panel() -> None:
                                 batch_parent,
                                 tags=tag_list,
                                 skip_existing=bool(skip_dup),
+                                units=_selected_case_units(
+                                    unit_option, custom_unit_system
+                                ),
+                                solver_version=solver_version,
                             )
                             st.success(
                                 f"导入完成：{result['imported']} 新增, {result['skipped']} 跳过, {result['failed']} 失败"
@@ -1312,13 +1617,26 @@ def _case_library_panel() -> None:
         dataset_name = st.text_input(
             "数据集名称", value="case_dataset", key="case_dataset_name"
         )
+        training_only = st.checkbox(
+            "仅导出质量门合格案例",
+            value=True,
+            key="case_dataset_training_only",
+        )
         export_dataset_clicked = st.button(
             "导出案例库训练数据集", use_container_width=True, key="case_export_dataset"
         )
         if export_dataset_clicked:
             try:
-                export = export_case_dataset(name=dataset_name)
-                st.success(f"训练数据集已导出：{export.export_dir}")
+                export = export_case_dataset(
+                    name=dataset_name, training_only=training_only
+                )
+                if export.case_count:
+                    st.success(f"训练数据集已导出：{export.export_dir}")
+                else:
+                    st.warning("没有案例通过训练质量门，已生成空数据集与排除原因清单。")
+                st.caption(
+                    f"候选 {export.source_case_count}，导出 {export.case_count}，排除 {export.skipped_case_count}"
+                )
                 st.caption(f"`{export.dataset_csv}`")
                 st.caption(f"`{export.frame_series_index_csv}`")
             except Exception as exc:
@@ -1414,6 +1732,7 @@ def _case_library_panel() -> None:
                             name=filtered_export_name.strip()
                             or "case_dataset_filtered",
                             case_dirs=[case.case_dir for case in matched_cases],
+                            training_only=training_only,
                         )
                         st.success(f"筛选数据集已导出：{export.export_dir}")
                         st.caption(f"`{export.dataset_csv}`")
@@ -1453,12 +1772,31 @@ def _case_library_panel() -> None:
 
 def _show_case_summary(summary: Any) -> None:
     st.markdown(f"**{summary.title}**")
-    cols = st.columns(5)
-    cols[0].metric("状态", summary.status)
-    cols[1].metric("文件数", len(summary.files))
-    cols[2].metric("模型", summary.file_counts.get("model", 0))
-    cols[3].metric("结果", summary.file_counts.get("result", 0))
-    cols[4].metric("大小(MB)", f"{summary.total_size_bytes / (1024 * 1024):.3f}")
+    quality = getattr(summary, "quality", {}) or evaluate_case_quality(summary)
+    cols = st.columns(6)
+    cols[0].metric("人工状态", summary.status)
+    cols[1].metric("执行状态", quality.get("execution_state", "unknown"))
+    cols[2].metric("质量分", quality.get("score", 0))
+    cols[3].metric("可训练", "是" if quality.get("training_eligible") else "否")
+    cols[4].metric("模型", summary.file_counts.get("model", 0))
+    cols[5].metric("结果", summary.file_counts.get("result", 0))
+
+    if quality.get("training_eligible"):
+        st.success("质量门通过：求解、单位、材料、网格和数值标签证据完整。")
+    elif quality.get("status") == "fail":
+        st.error("质量门失败：该案例不能作为机器学习真值。")
+    else:
+        st.warning("案例已归档，但证据尚不完整，暂不进入训练白名单。")
+    with st.expander("案例质量体检", expanded=not quality.get("training_eligible")):
+        st.dataframe(
+            quality_table_rows(quality),
+            use_container_width=True,
+            hide_index=True,
+        )
+        if quality.get("recommended_actions"):
+            st.markdown("**建议补齐**")
+            for action in quality["recommended_actions"]:
+                st.write(f"- {action}")
 
     st.write(f"来源目录：`{summary.source_folder}`")
     if summary.tags:
@@ -1513,13 +1851,23 @@ def _show_case_summary(summary: Any) -> None:
                     "状态": row.get("status"),
                     "标签": row.get("tags"),
                     "相似度": round(float(row.get("similarity", 0.0)), 4),
-                    "差异距离": round(float(row.get("distance", 0.0)), 4),
+                    "可信状态": row.get("execution_state", "unknown"),
+                    "可训练": "是" if row.get("training_eligible") else "否",
+                    "相似原因": "；".join(row.get("explanations", [])),
+                    "关键匹配": "；".join(row.get("matched_features", [])[:3]),
+                    "关键差异": "；".join(row.get("differing_features", [])[:3]),
                     "目录": row.get("case_dir"),
                 }
             )
         st.dataframe(
             display_rows, use_container_width=True, hide_index=True, height=260
         )
+        with st.expander("相似度分项证据", expanded=False):
+            for row in similar_rows:
+                st.markdown(
+                    f"**{row.get('title')}** · 相似度 {float(row.get('similarity', 0.0)):.3f}"
+                )
+                st.json(row.get("component_scores", {}))
 
     category = st.selectbox(
         "文件类别",
@@ -1540,6 +1888,18 @@ def _show_case_summary(summary: Any) -> None:
 
     with st.expander("case_summary.json", expanded=False):
         st.json(_load_json(Path(summary.case_dir) / "case_summary.json"))
+    package_path = Path(summary.case_dir) / "case_package.json"
+    if package_path.exists():
+        with st.expander("case_package.json v2", expanded=False):
+            st.json(_load_json(package_path))
+
+
+def _selected_case_units(option: str, custom_value: str = "") -> str | None:
+    if option == "未声明（仅归档）":
+        return None
+    if option == "自定义":
+        return custom_value.strip() or None
+    return option
 
 
 def _case_odb_extraction_panel(summary: Any) -> None:
@@ -2262,6 +2622,232 @@ def _format_number(value: Any) -> str:
         return f"{float(value):.5g}"
     except (TypeError, ValueError):
         return "N/A"
+
+
+def _plate_hole_batch_panel() -> None:
+    st.subheader("3D 带孔板批量仿真与代理模型")
+    st.caption(
+        "批量改变孔径、屈服强度和位移，生成真实 Abaqus 样本；通过质量门后训练 RF、MLP 神经网络和 GBR 代理模型。"
+    )
+    left, right = st.columns([0.38, 0.62], gap="large")
+
+    with left:
+        st.markdown("**创建参数计划**")
+        name = st.text_input(
+            "批次名称", value="plate_hole_ml_batch", key="plate_batch_name"
+        )
+        hole_text = st.text_input(
+            "孔半径 mm",
+            value="4, 5, 6",
+            key="plate_batch_hole_radii",
+        )
+        yield_text = st.text_input(
+            "屈服强度 MPa",
+            value="250, 300, 350",
+            key="plate_batch_yield_strengths",
+        )
+        displacement_text = st.text_input(
+            "加载位移 mm",
+            value="0.25, 0.35",
+            key="plate_batch_displacements",
+        )
+        dims = st.columns(3)
+        length = dims[0].number_input(
+            "长度", min_value=10.0, value=100.0, step=5.0, key="plate_batch_length"
+        )
+        width = dims[1].number_input(
+            "宽度", min_value=10.0, value=50.0, step=5.0, key="plate_batch_width"
+        )
+        thickness = dims[2].number_input(
+            "厚度", min_value=0.5, value=5.0, step=0.5, key="plate_batch_thickness"
+        )
+        material = st.columns(3)
+        youngs_modulus = material[0].number_input(
+            "E MPa",
+            min_value=1.0,
+            value=210000.0,
+            step=1000.0,
+            key="plate_batch_e",
+        )
+        poisson_ratio = material[1].number_input(
+            "泊松比",
+            min_value=-0.9,
+            max_value=0.49,
+            value=0.3,
+            step=0.01,
+            key="plate_batch_nu",
+        )
+        tangent_modulus = material[2].number_input(
+            "切线模量",
+            min_value=0.0,
+            value=1000.0,
+            step=100.0,
+            key="plate_batch_tangent",
+        )
+        run_settings = st.columns(3)
+        mesh_size = run_settings[0].number_input(
+            "网格 mm",
+            min_value=0.1,
+            value=2.5,
+            step=0.25,
+            key="plate_batch_mesh",
+        )
+        cpus = run_settings[1].number_input(
+            "CPU", min_value=1, max_value=32, value=4, key="plate_batch_cpus"
+        )
+        backend_label = run_settings[2].selectbox(
+            "后端",
+            ["批处理", "MCP"],
+            key="plate_batch_backend",
+        )
+        create_clicked = st.button(
+            "创建批量计划",
+            type="primary",
+            use_container_width=True,
+            key="plate_batch_create",
+        )
+        if create_clicked:
+            try:
+                config = PlateHoleBatchConfig(
+                    name=name,
+                    hole_radii=tuple(_parse_float_list(hole_text)),
+                    yield_strengths=tuple(_parse_float_list(yield_text)),
+                    displacements=tuple(_parse_float_list(displacement_text)),
+                    length=float(length),
+                    width=float(width),
+                    thickness=float(thickness),
+                    youngs_modulus=float(youngs_modulus),
+                    poisson_ratio=float(poisson_ratio),
+                    tangent_modulus=float(tangent_modulus),
+                    mesh_size=float(mesh_size),
+                    cpus=int(cpus),
+                    backend="mcp" if backend_label == "MCP" else "batch",
+                )
+                plan = create_plate_hole_batch_plan(config)
+            except Exception as exc:
+                st.error(f"批量计划创建失败：{exc}")
+            else:
+                st.session_state["plate_batch_selected"] = str(plan.plan_dir)
+                st.success(f"已创建 {len(plan.samples)} 个样本：{plan.plan_dir.name}")
+
+    with right:
+        plans = list_plate_hole_batch_plans()
+        if not plans:
+            st.info("还没有 3D 带孔板批量计划。")
+            return
+        options = [str(path) for path in plans]
+        selected_state = st.session_state.get("plate_batch_selected")
+        default_index = (
+            options.index(selected_state) if selected_state in options else 0
+        )
+        selected = st.selectbox(
+            "选择批量计划",
+            options,
+            index=default_index,
+            format_func=lambda value: Path(value).name,
+            key="plate_batch_selector",
+        )
+        st.session_state["plate_batch_selected"] = selected
+        plan = load_plate_hole_batch_plan(selected)
+        controls = st.columns(4)
+        max_samples = controls[0].number_input(
+            "本次样本数",
+            min_value=1,
+            max_value=max(1, len(plan.samples)),
+            value=min(1, max(1, len(plan.samples))),
+            key="plate_batch_max_samples",
+        )
+        archive_cases = controls[1].checkbox(
+            "归档案例", value=True, key="plate_batch_archive"
+        )
+        export_after = controls[2].checkbox(
+            "更新数据集", value=True, key="plate_batch_export"
+        )
+        train_after = controls[3].checkbox(
+            "训练代理模型", value=False, key="plate_batch_train"
+        )
+        confirm_submit = st.checkbox(
+            "确认允许本次提交 Abaqus Jobs",
+            value=False,
+            key="plate_batch_confirm_submit",
+        )
+        buttons = st.columns(3)
+        prepare_clicked = buttons[0].button(
+            "批量准备脚本", use_container_width=True, key="plate_batch_prepare"
+        )
+        solve_clicked = buttons[1].button(
+            "运行真实求解",
+            type="primary",
+            disabled=not confirm_submit,
+            use_container_width=True,
+            key="plate_batch_solve",
+        )
+        refresh_clicked = buttons[2].button(
+            "刷新数据集/模型",
+            use_container_width=True,
+            key="plate_batch_refresh_ml",
+        )
+
+        try:
+            if prepare_clicked:
+                with st.spinner("正在为批量样本生成确定性 Abaqus 脚本..."):
+                    plan = run_plate_hole_batch_plan(
+                        selected,
+                        execute=False,
+                        max_samples=int(max_samples),
+                    )
+                st.success("批量脚本已准备，尚未提交求解。")
+            elif solve_clicked:
+                with st.spinner("正在逐个执行 Abaqus、ODB 后处理与案例归档..."):
+                    plan = run_plate_hole_batch_plan(
+                        selected,
+                        execute=True,
+                        submit_jobs=True,
+                        archive_cases=archive_cases,
+                        export_dataset_after=export_after,
+                        train_models_after=train_after,
+                        max_samples=int(max_samples),
+                    )
+                st.success("本轮真实求解已结束，请检查每个样本状态。")
+            elif refresh_clicked:
+                plan = run_plate_hole_batch_plan(
+                    selected,
+                    execute=False,
+                    export_dataset_after=True,
+                    train_models_after=train_after,
+                    max_samples=0,
+                )
+                st.success("数据集与代理模型状态已刷新。")
+        except Exception as exc:
+            st.error(f"批量流水线失败：{type(exc).__name__}: {exc}")
+            plan = load_plate_hole_batch_plan(selected)
+
+        rows = plate_hole_batch_table_rows(plan)
+        counts: dict[str, int] = {}
+        for row in rows:
+            status = str(row.get("status", "unknown"))
+            counts[status] = counts.get(status, 0) + 1
+        metric_cols = st.columns(4)
+        metric_cols[0].metric("样本总数", len(rows))
+        metric_cols[1].metric("已归档", counts.get("archived", 0))
+        metric_cols[2].metric(
+            "失败/阻断", counts.get("failed", 0) + counts.get("blocked", 0)
+        )
+        metric_cols[3].metric(
+            "训练样本",
+            (plan.data.get("outputs", {}) or {}).get("dataset_case_count", 0),
+        )
+        st.dataframe(
+            rows,
+            use_container_width=True,
+            hide_index=True,
+            height=min(480, 42 + 30 * max(1, len(rows))),
+        )
+        outputs = plan.data.get("outputs", {}) or {}
+        if outputs:
+            with st.expander("数据集与代理模型输出", expanded=True):
+                st.json(outputs)
+        st.caption(f"批量报告：`{plan.report_path}`")
 
 
 def _abaqus_mcp_panel(selected_run: Path | None) -> None:

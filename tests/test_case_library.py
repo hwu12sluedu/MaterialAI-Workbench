@@ -14,7 +14,6 @@ from material_ai_workbench.case_library import (
     scan_case_folder,
 )
 
-
 SAMPLE_INP = """** minimal Abaqus input for case-library tests
 *Heading
 *Part, name=PART-1
@@ -85,7 +84,9 @@ def test_scan_case_folder_indexes_files_and_inp_features(tmp_path) -> None:
         "time,mises,PEEQ,UMAG,RF2\n0,10,0.01,0.1,-3\n1,100,0.12,0.6,-30\n",
         encoding="utf-8",
     )
-    (source / "job.sta").write_text("WARNING: increment cut back\nTHE ANALYSIS HAS COMPLETED\n", encoding="utf-8")
+    (source / "job.sta").write_text(
+        "WARNING: increment cut back\nTHE ANALYSIS HAS COMPLETED\n", encoding="utf-8"
+    )
     (source / "report.pdf").write_text("placeholder", encoding="utf-8")
     cases_root = tmp_path / "library"
 
@@ -97,7 +98,9 @@ def test_scan_case_folder_indexes_files_and_inp_features(tmp_path) -> None:
         cases_root=cases_root,
     )
     loaded = load_case_summary(summary.case_dir)
-    saved_json = json.loads((cases_root / loaded.case_id / "case_summary.json").read_text(encoding="utf-8"))
+    saved_json = json.loads(
+        (cases_root / loaded.case_id / "case_summary.json").read_text(encoding="utf-8")
+    )
 
     assert loaded.file_counts["model"] == 1
     assert loaded.file_counts["result"] == 2
@@ -132,7 +135,10 @@ def test_scan_case_folder_indexes_files_and_inp_features(tmp_path) -> None:
 
 def test_extract_csv_result_features_picks_common_abaqus_signals(tmp_path) -> None:
     csv_path = tmp_path / "job_result.csv"
-    csv_path.write_text("frame,S_Mises,PEEQ,U_mag,RF\n1,95,0.08,0.2,-12\n2,120,0.11,0.4,-18\n", encoding="utf-8")
+    csv_path.write_text(
+        "frame,S_Mises,PEEQ,U_mag,RF\n1,95,0.08,0.2,-12\n2,120,0.11,0.4,-18\n",
+        encoding="utf-8",
+    )
 
     features = extract_csv_result_features(csv_path)
 
@@ -154,3 +160,29 @@ def test_scan_single_inp_file_as_case(tmp_path) -> None:
     assert summary.file_counts["model"] == 1
     assert summary.inp_features["summary"]["inp_file_count"] == 1
     assert summary.inp_features["summary"]["steps"] == ["LoadStep"]
+
+
+def test_log_parser_does_not_treat_convergence_error_estimate_as_fatal(
+    tmp_path,
+) -> None:
+    source = tmp_path / "solver_log_case"
+    source.mkdir()
+    (source / "model.inp").write_text(SAMPLE_INP, encoding="utf-8")
+    (source / "job.odb").write_text("placeholder", encoding="utf-8")
+    (source / "job.dat").write_text(
+        "MAXIMUM RESIDUAL ERROR ESTIMATE = 1.0E-6\n"
+        "THE ANALYSIS HAS COMPLETED SUCCESSFULLY\n",
+        encoding="utf-8",
+    )
+    (source / "result.csv").write_text("frame,S_Mises\n0,10\n1,100\n", encoding="utf-8")
+
+    summary = scan_case_folder(
+        source,
+        title="converged case",
+        units="mm-N-s-MPa",
+        cases_root=tmp_path / "cases",
+    )
+
+    assert summary.result_features["summary"]["error_count"] == 0
+    assert summary.quality["execution_state"] == "solved"
+    assert summary.quality["training_eligible"] is True

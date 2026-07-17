@@ -8,6 +8,7 @@ nav:
       - Windows 客户端: DESKTOP_CLIENT_CN.md
       - 功能边界与验收: CAPABILITY_BOUNDARIES_CN.md
       - Abaqus 三维带孔板闭环: ABAQUS_CLOSED_LOOP_V03_CN.md
+      - v0.4 案例智能与批量仿真: V04_CASE_INTELLIGENCE_CN.md
       - Abaqus MCP: ABAQUS_MCP_WORKBENCH_CN.md
       - 案例库: CASE_LIBRARY_USER_GUIDE_CN.md
       - 自然语言服务（可选）: NATURAL_LANGUAGE_SERVICE_CN.md
@@ -24,6 +25,7 @@ nav:
   - API 文档:
       - API 入口: api/README_CN.md
       - Workbench API: api/MATERIALAI_API_USAGE_CN.md
+      - 案例智能 API: api/CASE_INTELLIGENCE_API_CN.md
       - pyLabFEA 与产品层: api/PYLABFEA_MATERIALAI_BRIDGE_CN.md
       - API 清单: api/API_INVENTORY_CN.md
   - 开发:

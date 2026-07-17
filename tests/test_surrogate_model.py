@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 
+import pytest
+
 from material_ai_workbench.surrogate_model import (
     compare_all_models,
     list_dataset_exports,
@@ -186,7 +188,11 @@ def test_surrogate_comparison_rows_filters_and_sorts(tmp_path) -> None:
             encoding="utf-8",
         )
 
-    rows = surrogate_comparison_rows([run_a, run_b, run_c], dataset_dir=dataset_dir, target_column="latest_odb_max_mises")
+    rows = surrogate_comparison_rows(
+        [run_a, run_b, run_c],
+        dataset_dir=dataset_dir,
+        target_column="latest_odb_max_mises",
+    )
 
     assert [row["model_kind"] for row in rows] == ["mlp", "random_forest"]
     assert rows[0]["rmse"] == 1.5
@@ -208,3 +214,79 @@ def test_compare_all_models_trains_rf_mlp_and_gbr(tmp_path) -> None:
     assert all(row["error"] is None for row in rows)
     assert all(row["run_dir"] for row in rows)
     assert all(row["cv_r2_mean"] is not None for row in rows)
+
+
+def test_surrogate_filters_quality_failures_and_excludes_governance_features(
+    tmp_path,
+) -> None:
+    dataset_dir = tmp_path / "datasets" / "governed"
+    dataset_csv = _write_case_dataset(dataset_dir)
+    with dataset_csv.open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+        fieldnames = list(rows[0]) + [
+            "case_schema_version",
+            "source_fingerprint",
+            "unit_system",
+            "unit_length",
+            "unit_stress",
+            "quality_status",
+            "quality_score",
+            "execution_state",
+            "training_eligible",
+            "quality_blocking_reasons",
+        ]
+    for index, row in enumerate(rows):
+        row.update(
+            {
+                "case_schema_version": "2.0",
+                "source_fingerprint": str(index) * 64,
+                "unit_system": "mm-N-s-MPa",
+                "unit_length": "mm",
+                "unit_stress": "MPa",
+                "quality_status": "pass" if index else "warn",
+                "quality_score": "95" if index else "60",
+                "execution_state": "postprocessed" if index else "prepared",
+                "training_eligible": "True" if index else "False",
+                "quality_blocking_reasons": "" if index else "not_solved",
+            }
+        )
+    with dataset_csv.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    run = train_surrogate_from_dataset(
+        dataset_dir,
+        target_column="latest_odb_max_mises",
+        output_root=tmp_path / "surrogates",
+    )
+    with run.features_csv.open("r", encoding="utf-8", newline="") as handle:
+        feature_header = next(csv.reader(handle))
+
+    assert run.metrics["sample_count"] == 5
+    assert run.metrics["quality_gate_skipped_case_ids"] == ["case_0"]
+    assert run.metrics["dataset_governance"]["unit_system"] == "mm-N-s-MPa"
+    assert "quality_score" not in feature_header
+    assert "unit_system" not in feature_header
+
+
+def test_surrogate_rejects_mixed_unit_systems(tmp_path) -> None:
+    dataset_dir = tmp_path / "datasets" / "mixed_units"
+    dataset_csv = _write_case_dataset(dataset_dir)
+    with dataset_csv.open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+        fieldnames = list(rows[0]) + ["unit_system", "training_eligible"]
+    for index, row in enumerate(rows):
+        row["unit_system"] = "SI-m-kg-s-Pa" if index == 0 else "mm-N-s-MPa"
+        row["training_eligible"] = "True"
+    with dataset_csv.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    with pytest.raises(ValueError, match="Mixed unit systems"):
+        train_surrogate_from_dataset(
+            dataset_dir,
+            target_column="latest_odb_max_mises",
+            output_root=tmp_path / "surrogates",
+        )
