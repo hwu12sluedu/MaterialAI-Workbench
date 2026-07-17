@@ -281,7 +281,7 @@ def run_core_self_check(paths: DesktopPaths) -> None:
 def verify_native_window_runtime() -> None:
     """Load the Windows pywebview backend and its bundled WebView2 assemblies."""
 
-    if os.name != "nt":
+    if os.name != "nt" or not getattr(sys, "frozen", False):
         return
     try:
         importlib.import_module("webview.platforms.winforms")

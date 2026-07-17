@@ -71,6 +71,9 @@ def test_native_window_runtime_failure_is_actionable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr("material_ai_workbench.desktop_launcher.os.name", "nt")
+    monkeypatch.setattr(
+        "material_ai_workbench.desktop_launcher.sys.frozen", True, raising=False
+    )
 
     def fail_import(name: str) -> None:
         raise FileNotFoundError("Microsoft.Web.WebView2.Core.dll")
@@ -81,3 +84,21 @@ def test_native_window_runtime_failure_is_actionable(
 
     with pytest.raises(DesktopLaunchError, match="桌面窗口运行库不完整"):
         verify_native_window_runtime()
+
+
+def test_source_mode_skips_native_window_runtime_probe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("material_ai_workbench.desktop_launcher.os.name", "nt")
+    monkeypatch.delattr(
+        "material_ai_workbench.desktop_launcher.sys.frozen", raising=False
+    )
+
+    def fail_import(name: str) -> None:
+        raise AssertionError(f"source mode must not import {name}")
+
+    monkeypatch.setattr(
+        "material_ai_workbench.desktop_launcher.importlib.import_module", fail_import
+    )
+
+    verify_native_window_runtime()
