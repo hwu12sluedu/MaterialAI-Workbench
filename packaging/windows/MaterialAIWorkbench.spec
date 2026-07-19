@@ -54,6 +54,7 @@ for distribution in (
     "scikit-learn",
     "matplotlib",
     "pillow",
+    "openpyxl",
 ):
     try:
         datas += copy_metadata(distribution)

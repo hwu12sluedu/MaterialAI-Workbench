@@ -32,6 +32,7 @@
 |---|---|
 | 材料模型 | J2、Hill、Barlat 屈服实验；Neo-Hookean、Mooney-Rivlin 曲线；pyLabFEA SVM/神经网络实验 |
 | 数据导入 | 实验应力-应变曲线和 Abaqus CSV 校验、归一化、预览与训练配置转换 |
+| 公开实验基准 | CFRP 官方数据下载/本地导入、许可与 SHA-256 追溯、质量报告、按材料类型留一验证折 |
 | 系统诊断 | 分别检查用户工作区、Abaqus 批处理运行时、SMAPython 与 MCP 实时桥接 |
 | Abaqus 验证 | UMAT 单元验算、INP/脚本生成、Job 队列、ODB 场变量与帧序列提取 |
 | 三维验收算例 | 带孔板参数化建模、真实 Job、ODB 特征、工程检查、断点恢复和案例归档 |
@@ -88,6 +89,12 @@ python -m pip install -e ".[app,desktop]"
 materialai-desktop
 ```
 
+CFRP 公开实验数据准备（下载前显式接受源数据的非商业许可）：
+
+```powershell
+conda run -n pylabfea materialai-cfrp-data --accept-license
+```
+
 本机验证：
 
 ```powershell
@@ -110,6 +117,7 @@ python -m build
 - [技术架构](docs/TECHNICAL_ARCHITECTURE_CN.md)
 - [复合材料代理模型：从会用到学透](docs/learning/COMPOSITE_SURROGATE_MASTERY_CN.md)
 - [复合材料机器学习：任务定义与可信验证](docs/learning/COMPOSITE_ML_VALIDATION_CN.md)
+- [CFRP 公开实验数据：受控导入与可信划分](docs/learning/CFRP_EXPERIMENTAL_DATASET_CN.md)
 - [pyLabFEA Notebook 与源码精读](docs/learning/PYLABFEA_NOTEBOOK_SOURCE_WALKTHROUGH_CN.md)
 - [从 pyLabFEA 到有限元深度学习](docs/learning/PYLABFEA_TO_FE_DEEP_LEARNING_TUTORIAL_CN.md)
 - [API 使用文档](docs/api/README_CN.md)

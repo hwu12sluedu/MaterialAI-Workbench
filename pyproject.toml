@@ -32,6 +32,7 @@ dependencies = [
   "scipy",
   "scikit-learn",
   "Pillow",
+  "openpyxl>=3.1",
 ]
 
 [project.optional-dependencies]
@@ -54,6 +55,7 @@ materialai-diagnostics = "material_ai_workbench.abaqus_diagnostics:main"
 materialai-plate-hole = "material_ai_workbench.plate_hole_acceptance:main"
 materialai-plate-hole-batch = "material_ai_workbench.plate_hole_batch:main"
 materialai-case = "material_ai_workbench.case_cli:main"
+materialai-cfrp-data = "material_ai_workbench.run_experimental_dataset:main"
 
 [tool.setuptools]
 packages = [

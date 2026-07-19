@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Added
+
+- Governed ingestion for the public 62-sample CFRP experimental benchmark, including explicit source-license acceptance, official metadata checks, SHA-256 verification and immutable workspace storage.
+- Stable normalized columns, target-specific missing-value handling, duplicate reporting and leave-one-material-type-out split manifests.
+- `materialai-cfrp-data` CLI plus Chinese data-governance tutorial, data card and API documentation.
+
+### Changed
+
+- Composite benchmark provenance now records the dataset DOI, version, license, expected filename and source hash without claiming that Workbench models have already reproduced the paper metrics.
+
 ## 0.4.0-alpha.1 - 2026-07-17
 
 ### Added

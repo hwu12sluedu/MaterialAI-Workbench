@@ -4,9 +4,9 @@
 
 ## 统计
 
-- 模块数：49
-- 顶层公开函数：222
-- 公开类：59
+- 模块数：52
+- 顶层公开函数：234
+- 公开类：61
 - 公开类方法：89
 
 ## 使用方式
@@ -515,6 +515,20 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 - 行号：25
 
 
+## `material_ai_workbench.composite_benchmarks`
+
+- 文件：`material_ai_workbench/composite_benchmarks.py`
+- 模块说明：Traceable literature and experimental benchmarks for composite ML work.
+
+### 顶层函数
+
+| 函数 | 行号 | 说明 |
+|---|---:|---|
+| `load_composite_benchmark_registry(path: Path \| str \| None = None)` | 31 | Load and validate the packaged registry or a user-supplied registry file. |
+| `load_composite_benchmarks(path: Path \| str \| None = None)` | 54 | Return validated benchmark entries. |
+| `composite_benchmark_rows(path: Path \| str \| None = None, *, task_kind: str \| None = None, reproduction_status: str \| None = None)` | 60 | Return flattened rows suitable for the desktop or Streamlit tables. |
+| `validate_composite_benchmark_registry(payload: Any, *, source_name: str = 'composite benchmark registry')` | 103 | Validate provenance fields and prevent unearned reproduction claims. |
+
 ## `material_ai_workbench.composite_dataset`
 
 - 文件：`material_ai_workbench/composite_dataset.py`
@@ -707,6 +721,33 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 | 函数 | 行号 | 说明 |
 |---|---:|---|
 | `generate_engineering_report(run_dir: Path \| str, *, output_path: Path \| str \| None = None, report_type: str = 'metal_closed_loop')` | 16 | Generate a Chinese engineering report from a completed run. |
+
+## `material_ai_workbench.experimental_datasets`
+
+- 文件：`material_ai_workbench/experimental_datasets.py`
+- 模块说明：Governed ingestion for public experimental composite datasets.
+
+### 顶层函数
+
+| 函数 | 行号 | 说明 |
+|---|---:|---|
+| `prepare_cfrp_experimental_dataset(*, source_path: Path \| str \| None = None, output_root: Path \| str = DATASETS_ROOT, accept_license: bool = False, timeout_seconds: float = 60.0, spec: ExperimentalDatasetSpec = ALSHEGHRI_CFRP_SPEC)` | 214 | Verify, normalize, audit, and split the public CFRP workbook. |
+| `fetch_mendeley_file_metadata(spec: ExperimentalDatasetSpec = ALSHEGHRI_CFRP_SPEC, *, timeout_seconds: float = 30.0)` | 341 | Read and validate the current official file metadata. |
+| `validate_mendeley_file_metadata(payload: Any, *, spec: ExperimentalDatasetSpec = ALSHEGHRI_CFRP_SPEC)` | 360 | Validate Mendeley file-list JSON without downloading the workbook. |
+| `read_cfrp_experimental_workbook(path: Path \| str)` | 428 | Parse the known source workbook into a stable, unit-labelled schema. |
+| `build_cfrp_quality_report(rows: list[dict[str, Any]], *, spec: ExperimentalDatasetSpec = ALSHEGHRI_CFRP_SPEC)` | 529 | Build an auditable profile without dropping or imputing source rows. |
+| `build_grouped_split_manifest(rows: list[dict[str, Any]], *, spec: ExperimentalDatasetSpec = ALSHEGHRI_CFRP_SPEC)` | 602 | Create target-specific leave-one-material-type-out evaluation folds. |
+
+### 类与方法
+
+#### `ExperimentalDatasetSpec`
+
+- 行号：30
+
+#### `ExperimentalDatasetResult`
+
+- 行号：202
+
 
 ## `material_ai_workbench.job_queue`
 
@@ -1025,6 +1066,18 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 | 函数 | 行号 | 说明 |
 |---|---:|---|
 | `main()` | 12 | 待补充 |
+
+## `material_ai_workbench.run_experimental_dataset`
+
+- 文件：`material_ai_workbench/run_experimental_dataset.py`
+- 模块说明：Prepare the traceable public CFRP experimental benchmark.
+
+### 顶层函数
+
+| 函数 | 行号 | 说明 |
+|---|---:|---|
+| `build_parser()` | 18 | Build the command-line parser. |
+| `main(argv: Sequence[str] \| None = None)` | 46 | Prepare the dataset and emit a machine-readable result. |
 
 ## `material_ai_workbench.run_metal_closed_loop`
 
