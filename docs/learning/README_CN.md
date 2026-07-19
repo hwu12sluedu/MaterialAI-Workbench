@@ -114,6 +114,7 @@ conda run -n pylabfea python -m material_ai_workbench.closed_loop_report
 ## 本目录文档
 
 - `COMPOSITE_SURROGATE_MASTERY_CN.md`：复合材料代理模型八周学习、真实 Abaqus 数据闭环和掌握标准。
+- `COMPOSITE_ML_VALIDATION_CN.md`：分类与回归任务、朴素贝叶斯边界、论文/实验基准和五级验证链。
 - `PYLABFEA_TO_FE_DEEP_LEARNING_TUTORIAL_CN.md`：完整学习路径。
 - `BARLAT_YLD2000_TO_YLD2004_CN.md`：Barlat/Yld2000-2D 到 pyLabFEA Yld2004-18p 的工程映射、限制和测试方法。
 

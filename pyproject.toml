@@ -72,6 +72,7 @@ material_ai_workbench = "material_ai_workbench"
 material_ai_workbench = [
   "library/*.json",
   "resources/*.png",
+  "resources/*.json",
   "resources/umat/*.f",
   "resources/umat/*.inp",
   "resources/umat/*.md",

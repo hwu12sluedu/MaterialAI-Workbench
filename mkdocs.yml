@@ -20,6 +20,7 @@ nav:
   - 教学文档:
       - 教学入口: learning/README_CN.md
       - 复合材料代理模型学习闭环: learning/COMPOSITE_SURROGATE_MASTERY_CN.md
+      - 复合材料 ML 任务与验证: learning/COMPOSITE_ML_VALIDATION_CN.md
       - Notebook 与源码精读: learning/PYLABFEA_NOTEBOOK_SOURCE_WALKTHROUGH_CN.md
       - 有限元深度学习路线: learning/PYLABFEA_TO_FE_DEEP_LEARNING_TUTORIAL_CN.md
       - Barlat Yld2000 到 Yld2004: learning/BARLAT_YLD2000_TO_YLD2004_CN.md
