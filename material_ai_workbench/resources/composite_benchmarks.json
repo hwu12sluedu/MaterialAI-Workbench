@@ -1,0 +1,364 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-07-19",
+  "evidence_policy": {
+    "reference_only": "论文用于定义任务或外部对照，尚未在本仓库复现。",
+    "data_available": "已确认公开数据入口，但尚未完成本仓库的固定划分复现。",
+    "reproduced": "已保存数据快照、划分、代码版本、预测明细和本站指标。"
+  },
+  "benchmarks": [
+    {
+      "id": "pathan_2019_ud_sve_fea",
+      "title": "Predictions of the mechanical properties of unidirectional fibre composites by supervised machine learning",
+      "year": 2019,
+      "material_system": "单向纤维复合材料，圆柱纤维随机微观结构",
+      "task_kind": "regression",
+      "data_kind": "finite_element",
+      "input_features": [
+        "微观结构图像的二点相关函数",
+        "PCA 主成分",
+        "组分本构信息"
+      ],
+      "targets": [
+        "宏观刚度",
+        "横向屈服强度"
+      ],
+      "models": [
+        "gradient_boosted_trees"
+      ],
+      "sample_count": 1800,
+      "reported_metrics": [
+        {
+          "name": "maximum_percent_error",
+          "value": 5.0,
+          "unit": "percent",
+          "scope": "论文报告的有限元与交叉验证预测对比"
+        }
+      ],
+      "source": {
+        "doi": "10.1038/s41598-019-50144-w",
+        "article_url": "https://www.nature.com/articles/s41598-019-50144-w",
+        "dataset_url": null
+      },
+      "reproduction": {
+        "status": "reference_only",
+        "our_metrics": null,
+        "notes": "与本项目的微观结构到均匀化性能主线高度一致，需用本仓库 RVE/PBC 数据独立复现。"
+      }
+    },
+    {
+      "id": "wang_2024_short_fiber_rve_ann",
+      "title": "Prediction of elastic properties of short fiber reinforced composites based on machine learning",
+      "year": 2024,
+      "material_system": "空间随机、层内随机和定向排列短纤维复合材料",
+      "task_kind": "regression",
+      "data_kind": "finite_element",
+      "input_features": [
+        "纤维长度",
+        "长径比",
+        "纤维体积分数",
+        "纤维与基体材料属性"
+      ],
+      "targets": [
+        "等效弹性性能"
+      ],
+      "models": [
+        "artificial_neural_network"
+      ],
+      "sample_count": null,
+      "reported_metrics": [
+        {
+          "name": "r2_lower_bound",
+          "value": 0.98,
+          "unit": "dimensionless",
+          "scope": "论文摘要报告的三个短纤维代理模型"
+        }
+      ],
+      "source": {
+        "doi": "10.13801/j.cnki.fhclxb.20240229.005",
+        "article_url": "https://fhclxb.buaa.edu.cn/article/doi/10.13801/j.cnki.fhclxb.20240229.005",
+        "dataset_url": null
+      },
+      "reproduction": {
+        "status": "reference_only",
+        "our_metrics": null,
+        "notes": "作为短纤维角度、长径比和空间分布扩展的中文文献基准。"
+      }
+    },
+    {
+      "id": "shah_2022_ncamp_ud_cfrp",
+      "title": "Data-driven approach for the prediction of mechanical properties of carbon fiber reinforced composites",
+      "year": 2022,
+      "material_system": "NCAMP 单向碳纤维层合材料",
+      "task_kind": "regression",
+      "data_kind": "experimental",
+      "input_features": [
+        "环境条件",
+        "固化循环",
+        "材料体系"
+      ],
+      "targets": [
+        "弹性模量"
+      ],
+      "models": [
+        "recurrent_neural_network"
+      ],
+      "sample_count": null,
+      "reported_metrics": [
+        {
+          "name": "r2_upper_bound",
+          "value": 0.98,
+          "unit": "dimensionless",
+          "scope": "论文报告的模量预测最佳结果"
+        }
+      ],
+      "source": {
+        "doi": "10.1039/D2MA00698G",
+        "article_url": "https://pubs.rsc.org/en/content/articlelanding/2022/ma/d2ma00698g",
+        "dataset_url": null
+      },
+      "reproduction": {
+        "status": "reference_only",
+        "our_metrics": null,
+        "notes": "证明实验和制造变量可进入性能回归，但 NCAMP 数据可用范围需单独核实。"
+      }
+    },
+    {
+      "id": "alsheghri_2025_cfrp_experiment",
+      "title": "Predicting mechanical properties of CFRP composites using data-driven models with comparative analysis",
+      "year": 2025,
+      "material_system": "九类含不同夹层、CNT、玻璃化转变温度和制造压力的 CFRP",
+      "task_kind": "regression",
+      "data_kind": "experimental",
+      "input_features": [
+        "CNT 体积分数",
+        "夹层体积分数",
+        "玻璃化转变温度",
+        "制造压力"
+      ],
+      "targets": [
+        "弯曲强度",
+        "弯曲模量",
+        "II 型能量释放率"
+      ],
+      "models": [
+        "ridge_regression",
+        "random_forest",
+        "support_vector_regression"
+      ],
+      "sample_count": 62,
+      "reported_metrics": [
+        {
+          "name": "r2",
+          "value": 0.966,
+          "unit": "dimensionless",
+          "scope": "弯曲强度"
+        },
+        {
+          "name": "r2",
+          "value": 0.871,
+          "unit": "dimensionless",
+          "scope": "弯曲模量"
+        },
+        {
+          "name": "r2",
+          "value": 0.903,
+          "unit": "dimensionless",
+          "scope": "II 型能量释放率"
+        }
+      ],
+      "source": {
+        "doi": "10.1371/journal.pone.0319787",
+        "article_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11975104/",
+        "dataset_url": "https://data.mendeley.com/datasets/fspdwb4mst/1"
+      },
+      "reproduction": {
+        "status": "data_available",
+        "our_metrics": null,
+        "notes": "首选公开实验回归基准。复现时必须按 CFRP 类型分组，避免同类试样泄漏到训练和测试两侧。"
+      }
+    },
+    {
+      "id": "liu_2022_woven_coupon_dataset",
+      "title": "Experimental dataset on the in-plane tensile, shear, and compressive properties of a carbon-epoxy twill woven composite",
+      "year": 2022,
+      "material_system": "碳纤维-环氧斜纹编织复合材料",
+      "task_kind": "calibration_validation",
+      "data_kind": "experimental",
+      "input_features": [
+        "加载方向",
+        "试验类型",
+        "应变或位移历史"
+      ],
+      "targets": [
+        "应力-应变曲线",
+        "拉伸与压缩强度",
+        "面内弹性与剪切模量",
+        "泊松比"
+      ],
+      "models": [],
+      "sample_count": null,
+      "reported_metrics": [],
+      "source": {
+        "doi": "10.1016/j.dib.2022.108650",
+        "article_url": "https://doi.org/10.1016/j.dib.2022.108650",
+        "dataset_url": "https://doi.org/10.1016/j.dib.2022.108650"
+      },
+      "reproduction": {
+        "status": "data_available",
+        "our_metrics": null,
+        "notes": "适合校准 Abaqus 编织复材材料卡，并作为机器学习回归的外部实验验证集。"
+      }
+    },
+    {
+      "id": "hasebe_2025_cai_dataset",
+      "title": "Dataset of compression after impact testing on carbon fiber reinforced plastic laminates",
+      "year": 2025,
+      "material_system": "热固性 CFRP 层合板低速冲击后压缩",
+      "task_kind": "regression",
+      "data_kind": "experimental",
+      "input_features": [
+        "铺层",
+        "冲头形状",
+        "冲击能量",
+        "冲击损伤信息"
+      ],
+      "targets": [
+        "冲击后压缩强度",
+        "强度降低率"
+      ],
+      "models": [],
+      "sample_count": null,
+      "reported_metrics": [],
+      "source": {
+        "doi": "10.1016/j.dib.2025.111509",
+        "article_url": "https://pubmed.ncbi.nlm.nih.gov/40235700/",
+        "dataset_url": "https://doi.org/10.1016/j.dib.2025.111509"
+      },
+      "reproduction": {
+        "status": "data_available",
+        "our_metrics": null,
+        "notes": "适合产品后续的损伤容限和 CAI 强度回归，不作为当前最小闭环的首个数据集。"
+      }
+    },
+    {
+      "id": "addin_2007_naive_bayes_damage",
+      "title": "A Naive-Bayes classifier for damage detection in engineering materials",
+      "year": 2007,
+      "material_system": "AS4/3501-6 准各向同性石墨-环氧层合板",
+      "task_kind": "classification",
+      "data_kind": "experimental",
+      "input_features": [
+        "PZT/Lamb 波幅值的均值与峰值特征"
+      ],
+      "targets": [
+        "层合板损伤类别"
+      ],
+      "models": [
+        "naive_bayes"
+      ],
+      "sample_count": null,
+      "reported_metrics": [],
+      "source": {
+        "doi": "10.1016/j.matdes.2006.07.018",
+        "article_url": "https://doi.org/10.1016/j.matdes.2006.07.018",
+        "dataset_url": null
+      },
+      "reproduction": {
+        "status": "reference_only",
+        "our_metrics": null,
+        "notes": "说明朴素贝叶斯适合从传感特征判断离散损伤状态，不用于直接回归弹性模量或强度。"
+      }
+    },
+    {
+      "id": "amoateng_mensah_2026_ae_damage",
+      "title": "Classification and Parameter Selection for Damage Characterization in CFRP Composite Materials Using Acoustic Emission and Multivariate Statistics",
+      "year": 2026,
+      "material_system": "准各向同性热固性 CFRP 层合板",
+      "task_kind": "classification",
+      "data_kind": "experimental",
+      "input_features": [
+        "载荷水平",
+        "声发射频率",
+        "声发射幅值"
+      ],
+      "targets": [
+        "纤维断裂",
+        "分层",
+        "基体开裂"
+      ],
+      "models": [
+        "logistic_regression",
+        "random_forest",
+        "gradient_boosting",
+        "support_vector_machine",
+        "knn",
+        "naive_bayes"
+      ],
+      "sample_count": 600,
+      "reported_metrics": [
+        {
+          "name": "f1_score",
+          "value": 0.96,
+          "unit": "dimensionless",
+          "scope": "朴素贝叶斯，分层"
+        },
+        {
+          "name": "f1_score",
+          "value": 0.63,
+          "unit": "dimensionless",
+          "scope": "朴素贝叶斯，纤维断裂"
+        },
+        {
+          "name": "f1_score",
+          "value": 0.74,
+          "unit": "dimensionless",
+          "scope": "朴素贝叶斯，基体开裂"
+        }
+      ],
+      "source": {
+        "doi": "10.3390/ma19102091",
+        "article_url": "https://www.mdpi.com/1996-1944/19/10/2091",
+        "dataset_url": null
+      },
+      "reproduction": {
+        "status": "reference_only",
+        "our_metrics": null,
+        "notes": "展示朴素贝叶斯可作为轻量分类基线，但特征相关和类别重叠时可能明显弱于树模型。"
+      }
+    },
+    {
+      "id": "pasha_2023_generalised_homogenisation_cnn",
+      "title": "A generalised deep learning-based surrogate model for homogenisation utilising material property encoding and physics-based bounds",
+      "year": 2023,
+      "material_system": "宽体积分数与组分模量对比范围的纤维增强复合材料 RVE",
+      "task_kind": "regression",
+      "data_kind": "numerical_homogenisation",
+      "input_features": [
+        "周期微观结构图像",
+        "纤维体积分数",
+        "组分弹性模量编码"
+      ],
+      "targets": [
+        "E22",
+        "E33",
+        "G23"
+      ],
+      "models": [
+        "convolutional_neural_network"
+      ],
+      "sample_count": 30000,
+      "reported_metrics": [],
+      "source": {
+        "doi": "10.1038/s41598-023-34823-3",
+        "article_url": "https://www.nature.com/articles/s41598-023-34823-3",
+        "dataset_url": null
+      },
+      "reproduction": {
+        "status": "reference_only",
+        "our_metrics": null,
+        "notes": "作为体素/CNN 与物理上下界质量门的后续研究基准，不应先于表格代理模型闭环。"
+      }
+    }
+  ]
+}

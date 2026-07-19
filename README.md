@@ -109,6 +109,7 @@ python -m build
 - [案例库使用指南](docs/CASE_LIBRARY_USER_GUIDE_CN.md)
 - [技术架构](docs/TECHNICAL_ARCHITECTURE_CN.md)
 - [复合材料代理模型：从会用到学透](docs/learning/COMPOSITE_SURROGATE_MASTERY_CN.md)
+- [复合材料机器学习：任务定义与可信验证](docs/learning/COMPOSITE_ML_VALIDATION_CN.md)
 - [pyLabFEA Notebook 与源码精读](docs/learning/PYLABFEA_NOTEBOOK_SOURCE_WALKTHROUGH_CN.md)
 - [从 pyLabFEA 到有限元深度学习](docs/learning/PYLABFEA_TO_FE_DEEP_LEARNING_TUTORIAL_CN.md)
 - [API 使用文档](docs/api/README_CN.md)

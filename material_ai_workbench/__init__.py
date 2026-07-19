@@ -9,6 +9,7 @@ from .composite_dataset import (
     run_composite_batch_plan,
     train_composite_surrogate,
 )
+from .composite_benchmarks import composite_benchmark_rows, load_composite_benchmarks
 from .pipeline import WorkbenchConfig, WorkbenchResult, run_material_workbench
 from .job_queue import JobQueue, QueuedJob
 from .multi_fidelity import MultiFidelityResult, train_multi_fidelity
@@ -28,6 +29,8 @@ __all__ = [
     "QueuedJob",
     "MultiFidelityResult",
     "create_composite_batch_plan",
+    "composite_benchmark_rows",
+    "load_composite_benchmarks",
     "run_composite_batch_plan",
     "train_composite_surrogate",
     "run_composite_plate_workflow",
