@@ -54,8 +54,24 @@ def test_registry_rejects_unearned_reproduced_status():
         "notes": "invalid",
     }
 
-    with pytest.raises(ValueError, match="cannot be reproduced without our_metrics"):
+    with pytest.raises(ValueError, match="cannot use reproduced without our_metrics"):
         validate_composite_benchmark_registry(payload)
+
+
+def test_cfrp_independent_baseline_is_registered_without_paper_overclaim():
+    entry = next(
+        item
+        for item in load_composite_benchmarks()
+        if item["id"] == "alsheghri_2025_cfrp_experiment"
+    )
+
+    assert entry["reproduction"]["status"] == "baseline_completed"
+    metrics = entry["reproduction"]["our_metrics"]
+    assert metrics["protocol"] == "leave_one_material_type_out"
+    assert metrics["paper_comparability"] == "not_directly_comparable"
+    assert len(metrics["normalized_csv_sha256"]) == 64
+    assert len(metrics["results"]) == 4
+    assert any(result["best_model"] == "mean" for result in metrics["results"])
 
 
 def test_registry_rejects_duplicate_ids():

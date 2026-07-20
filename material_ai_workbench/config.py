@@ -76,6 +76,9 @@ SURROGATES_ROOT = Path(
 )
 IMPORTS_ROOT = Path(_env("MATERIALAI_IMPORTS_ROOT", str(WORKSPACE_ROOT / "imports")))
 DATASETS_ROOT = Path(_env("MATERIALAI_DATASETS_ROOT", str(WORKSPACE_ROOT / "datasets")))
+EXPERIMENTS_ROOT = Path(
+    _env("MATERIALAI_EXPERIMENTS_ROOT", str(WORKSPACE_ROOT / "experiments"))
+)
 CLOSED_LOOP_ROOT = Path(
     _env("MATERIALAI_CLOSED_LOOP_ROOT", str(WORKSPACE_ROOT / "closed_loop_reports"))
 )

@@ -7,6 +7,8 @@
 - Governed ingestion for the public 62-sample CFRP experimental benchmark, including explicit source-license acceptance, official metadata checks, SHA-256 verification and immutable workspace storage.
 - Stable normalized columns, target-specific missing-value handling, duplicate reporting and leave-one-material-type-out split manifests.
 - `materialai-cfrp-data` CLI plus Chinese data-governance tutorial, data card and API documentation.
+- Leakage-resistant CFRP Mean/Ridge/Random Forest/SVR baselines with fixed material-type folds, nested group-residual intervals, OOF evidence tables, model cards and a Chinese report.
+- `materialai-cfrp-baseline` CLI and a documented `baseline_completed` benchmark status that does not overstate paper reproduction.
 
 ### Changed
 

@@ -4,9 +4,9 @@
 
 ## 统计
 
-- 模块数：52
-- 顶层公开函数：234
-- 公开类：61
+- 模块数：54
+- 顶层公开函数：239
+- 公开类：62
 - 公开类方法：89
 
 ## 使用方式
@@ -524,10 +524,10 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 
 | 函数 | 行号 | 说明 |
 |---|---:|---|
-| `load_composite_benchmark_registry(path: Path \| str \| None = None)` | 31 | Load and validate the packaged registry or a user-supplied registry file. |
-| `load_composite_benchmarks(path: Path \| str \| None = None)` | 54 | Return validated benchmark entries. |
-| `composite_benchmark_rows(path: Path \| str \| None = None, *, task_kind: str \| None = None, reproduction_status: str \| None = None)` | 60 | Return flattened rows suitable for the desktop or Streamlit tables. |
-| `validate_composite_benchmark_registry(payload: Any, *, source_name: str = 'composite benchmark registry')` | 103 | Validate provenance fields and prevent unearned reproduction claims. |
+| `load_composite_benchmark_registry(path: Path \| str \| None = None)` | 37 | Load and validate the packaged registry or a user-supplied registry file. |
+| `load_composite_benchmarks(path: Path \| str \| None = None)` | 60 | Return validated benchmark entries. |
+| `composite_benchmark_rows(path: Path \| str \| None = None, *, task_kind: str \| None = None, reproduction_status: str \| None = None)` | 66 | Return flattened rows suitable for the desktop or Streamlit tables. |
+| `validate_composite_benchmark_registry(payload: Any, *, source_name: str = 'composite benchmark registry')` | 109 | Validate provenance fields and prevent unearned reproduction claims. |
 
 ## `material_ai_workbench.composite_dataset`
 
@@ -721,6 +721,27 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 | 函数 | 行号 | 说明 |
 |---|---:|---|
 | `generate_engineering_report(run_dir: Path \| str, *, output_path: Path \| str \| None = None, report_type: str = 'metal_closed_loop')` | 16 | Generate a Chinese engineering report from a completed run. |
+
+## `material_ai_workbench.experimental_baselines`
+
+- 文件：`material_ai_workbench/experimental_baselines.py`
+- 模块说明：Leakage-resistant baselines for the governed CFRP experimental dataset.
+
+### 顶层函数
+
+| 函数 | 行号 | 说明 |
+|---|---:|---|
+| `train_cfrp_grouped_baselines(dataset_dir: Path \| str = DEFAULT_DATASET_DIR, *, output_root: Path \| str = DEFAULT_OUTPUT_ROOT, targets: Sequence[str] \| None = None, models: Sequence[str] = DEFAULT_MODELS, random_state: int = 42, interval_coverage: float = 0.9, rf_estimators: int = 250)` | 89 | Train deterministic baselines on the registered material-type folds. |
+| `load_cfrp_baseline_dataset(dataset_dir: Path \| str)` | 305 | Load and cryptographically verify the governed dataset artifacts. |
+| `validate_target_split_contract(bundle: _DatasetBundle, target: str)` | 354 | Validate that fixed folds cover each labelled sample once without leakage. |
+
+### 类与方法
+
+#### `ExperimentalBaselineRun`
+
+- 行号：62
+- 说明：Artifacts produced by one fixed-split baseline experiment.
+
 
 ## `material_ai_workbench.experimental_datasets`
 
@@ -1066,6 +1087,18 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 | 函数 | 行号 | 说明 |
 |---|---:|---|
 | `main()` | 12 | 待补充 |
+
+## `material_ai_workbench.run_experimental_baselines`
+
+- 文件：`material_ai_workbench/run_experimental_baselines.py`
+- 模块说明：Train fixed-split CFRP experimental regression baselines.
+
+### 顶层函数
+
+| 函数 | 行号 | 说明 |
+|---|---:|---|
+| `build_parser()` | 20 | Build the command-line parser. |
+| `main(argv: Sequence[str] \| None = None)` | 56 | Run the experiment and emit a machine-readable result. |
 
 ## `material_ai_workbench.run_experimental_dataset`
 

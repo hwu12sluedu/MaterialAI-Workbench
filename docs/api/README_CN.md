@@ -11,6 +11,9 @@ v0.4 案例包、可解释检索、历史案例约束和带孔板批量接口见
 CFRP 公开实验数据的下载校验、标准化、质量报告与分组折见
 [CFRP 实验数据 API](EXPERIMENTAL_DATASET_API_CN.md)。
 
+固定材料类型留一训练、逐样本 OOF 预测、模型卡和分组残差区间见
+[CFRP 分组基线 API](EXPERIMENTAL_BASELINE_API_CN.md)。
+
 ## 生成自动 API 清单
 
 ```powershell
@@ -36,6 +39,7 @@ docs/api/API_INVENTORY_CN.md
 7. 再读 `material_ai_workbench.case_library`：案例库。
 8. 再读 `material_ai_workbench.dataset_export` 和 `surrogate_model`：数据集与代理模型。
 9. 再读 `material_ai_workbench.experimental_datasets`：公开数据来源治理与防泄漏划分。
+10. 最后读 `material_ai_workbench.experimental_baselines`：固定折训练、分组评估和模型落盘。
 
 ## API 稳定性约定
 

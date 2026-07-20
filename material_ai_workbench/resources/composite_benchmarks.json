@@ -179,9 +179,47 @@
         "ingestion_command": "materialai-cfrp-data --accept-license"
       },
       "reproduction": {
-        "status": "data_available",
-        "our_metrics": null,
-        "notes": "已实现带许可确认、SHA-256、数据卡和按 CFRP 类型留一折的受控导入；尚未训练本站模型，因此仍为 data_available。"
+        "status": "baseline_completed",
+        "our_metrics": {
+          "protocol": "leave_one_material_type_out",
+          "command": "materialai-cfrp-baseline",
+          "random_state": 42,
+          "rf_estimators": 250,
+          "interval_nominal_coverage": 0.9,
+          "normalized_csv_sha256": "9cf6a7c23a10d6899e520d36cb6a435fed5b35256edb87946c20dd343d1f228f",
+          "paper_comparability": "not_directly_comparable",
+          "results": [
+            {
+              "target": "flexural_strength_mpa",
+              "best_model": "ridge",
+              "mae": 40.67572138882098,
+              "rmse": 54.803276467212626,
+              "r2": 0.8394046856589108
+            },
+            {
+              "target": "flexural_modulus_reported_mpa",
+              "best_model": "ridge",
+              "mae": 4.45227245520873,
+              "rmse": 5.478121621145314,
+              "r2": 0.6971904130879161
+            },
+            {
+              "target": "tensile_strength_mpa",
+              "best_model": "random_forest",
+              "mae": 5.999570191403829,
+              "rmse": 7.554269871420336,
+              "r2": -0.07719796749429886
+            },
+            {
+              "target": "mode_ii_energy_release_rate_reported_kj_m2",
+              "best_model": "mean",
+              "mae": 419.15903361344533,
+              "rmse": 560.6843796403106,
+              "r2": -0.6032112536891245
+            }
+          ]
+        },
+        "notes": "已完成官方数据版本 1 的独立分组基线。指标来自完整留出 CFRP 材料类型的 OOF 预测，不与论文逐行 LOOCV 数值直接比较，也不代表本构模型精度。"
       }
     },
     {

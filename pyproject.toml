@@ -56,6 +56,7 @@ materialai-plate-hole = "material_ai_workbench.plate_hole_acceptance:main"
 materialai-plate-hole-batch = "material_ai_workbench.plate_hole_batch:main"
 materialai-case = "material_ai_workbench.case_cli:main"
 materialai-cfrp-data = "material_ai_workbench.run_experimental_dataset:main"
+materialai-cfrp-baseline = "material_ai_workbench.run_experimental_baselines:main"
 
 [tool.setuptools]
 packages = [

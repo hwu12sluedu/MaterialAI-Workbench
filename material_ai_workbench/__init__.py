@@ -2,7 +2,11 @@
 
 from importlib.metadata import PackageNotFoundError, version
 
-from .composite_workflow import CompositePlateConfig, CompositePlateResult, run_composite_plate_workflow
+from .composite_workflow import (
+    CompositePlateConfig,
+    CompositePlateResult,
+    run_composite_plate_workflow,
+)
 from .composite_dataset import (
     CompositeBatchConfig,
     create_composite_batch_plan,
@@ -13,6 +17,10 @@ from .composite_benchmarks import composite_benchmark_rows, load_composite_bench
 from .experimental_datasets import (
     ExperimentalDatasetResult,
     prepare_cfrp_experimental_dataset,
+)
+from .experimental_baselines import (
+    ExperimentalBaselineRun,
+    train_cfrp_grouped_baselines,
 )
 from .pipeline import WorkbenchConfig, WorkbenchResult, run_material_workbench
 from .job_queue import JobQueue, QueuedJob
@@ -28,6 +36,7 @@ __all__ = [
     "CompositePlateResult",
     "CompositeBatchConfig",
     "ExperimentalDatasetResult",
+    "ExperimentalBaselineRun",
     "WorkbenchConfig",
     "WorkbenchResult",
     "JobQueue",
@@ -37,6 +46,7 @@ __all__ = [
     "composite_benchmark_rows",
     "load_composite_benchmarks",
     "prepare_cfrp_experimental_dataset",
+    "train_cfrp_grouped_baselines",
     "run_composite_batch_plan",
     "train_composite_surrogate",
     "run_composite_plate_workflow",
