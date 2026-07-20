@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Added
+
+- Governed ingestion for the public 62-sample CFRP experimental benchmark, including explicit source-license acceptance, official metadata checks, SHA-256 verification and immutable workspace storage.
+- Stable normalized columns, target-specific missing-value handling, duplicate reporting and leave-one-material-type-out split manifests.
+- `materialai-cfrp-data` CLI plus Chinese data-governance tutorial, data card and API documentation.
+- Leakage-resistant CFRP Mean/Ridge/Random Forest/SVR baselines with fixed material-type folds, nested group-residual intervals, OOF evidence tables, model cards and a Chinese report.
+- `materialai-cfrp-baseline` CLI and a documented `baseline_completed` benchmark status that does not overstate paper reproduction.
+- Validation-protocol audit comparing material-group holdout and row LOOCV on raw and exactly deduplicated CFRP views, with per-sample duplicate-leakage evidence.
+- `materialai-cfrp-validation-audit` CLI, protocol-sensitivity figures, Chinese report and learning/API documentation.
+
+### Changed
+
+- Composite benchmark provenance now records the dataset DOI, version, license, expected filename and source hash without claiming that Workbench models have already reproduced the paper metrics.
+
 ## 0.4.0-alpha.1 - 2026-07-17
 
 ### Added

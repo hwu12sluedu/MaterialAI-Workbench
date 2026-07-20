@@ -10,7 +10,13 @@ from typing import Any
 _REGISTRY_RESOURCE = "composite_benchmarks.json"
 _TASK_KINDS = {"regression", "classification", "calibration_validation"}
 _DATA_KINDS = {"finite_element", "numerical_homogenisation", "experimental"}
-_REPRODUCTION_STATUSES = {"reference_only", "data_available", "reproduced"}
+_REPRODUCTION_STATUSES = {
+    "reference_only",
+    "data_available",
+    "baseline_completed",
+    "reproduced",
+}
+_METRIC_STATUSES = {"baseline_completed", "reproduced"}
 _REQUIRED_ENTRY_FIELDS = {
     "id",
     "title",
@@ -157,11 +163,11 @@ def validate_composite_benchmark_registry(
         if status not in _REPRODUCTION_STATUSES:
             raise ValueError(f"{label} has unsupported reproduction status: {status}")
         our_metrics = reproduction.get("our_metrics")
-        if status == "reproduced" and not isinstance(our_metrics, dict):
-            raise ValueError(f"{label} cannot be reproduced without our_metrics.")
-        if status != "reproduced" and our_metrics is not None:
+        if status in _METRIC_STATUSES and not isinstance(our_metrics, dict):
+            raise ValueError(f"{label} cannot use {status} without our_metrics.")
+        if status not in _METRIC_STATUSES and our_metrics is not None:
             raise ValueError(
-                f"{label} cannot publish our_metrics before reproduction is complete."
+                f"{label} cannot publish our_metrics before a baseline is complete."
             )
 
     return payload

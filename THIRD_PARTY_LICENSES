@@ -31,6 +31,10 @@ Runtime / build dependencies
   License: BSD 3-Clause License
   URL: https://pandas.pydata.org
 
+- openpyxl
+  License: MIT License
+  URL: https://openpyxl.readthedocs.io
+
 - Plotly.py
   License: MIT License
   URL: https://plotly.com/python/

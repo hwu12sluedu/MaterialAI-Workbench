@@ -169,13 +169,57 @@
       ],
       "source": {
         "doi": "10.1371/journal.pone.0319787",
-        "article_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11975104/",
-        "dataset_url": "https://data.mendeley.com/datasets/fspdwb4mst/1"
+        "article_url": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0319787",
+        "dataset_url": "https://data.mendeley.com/datasets/fspdwb4mst/1",
+        "dataset_doi": "10.17632/fspdwb4mst.1",
+        "dataset_version": 1,
+        "data_license": "CC BY-NC 3.0",
+        "expected_filename": "Dataset_Processing-Structure-Property_CFRPs.xlsx",
+        "expected_sha256": "759fe8568ac38a7d45db0aaa65b4aa3d8d9386d46615411e530d375d5f6652e8",
+        "ingestion_command": "materialai-cfrp-data --accept-license"
       },
       "reproduction": {
-        "status": "data_available",
-        "our_metrics": null,
-        "notes": "首选公开实验回归基准。复现时必须按 CFRP 类型分组，避免同类试样泄漏到训练和测试两侧。"
+        "status": "baseline_completed",
+        "our_metrics": {
+          "protocol": "leave_one_material_type_out",
+          "command": "materialai-cfrp-baseline",
+          "random_state": 42,
+          "rf_estimators": 250,
+          "interval_nominal_coverage": 0.9,
+          "normalized_csv_sha256": "9cf6a7c23a10d6899e520d36cb6a435fed5b35256edb87946c20dd343d1f228f",
+          "paper_comparability": "not_directly_comparable",
+          "results": [
+            {
+              "target": "flexural_strength_mpa",
+              "best_model": "ridge",
+              "mae": 40.67572138882098,
+              "rmse": 54.803276467212626,
+              "r2": 0.8394046856589108
+            },
+            {
+              "target": "flexural_modulus_reported_mpa",
+              "best_model": "ridge",
+              "mae": 4.45227245520873,
+              "rmse": 5.478121621145314,
+              "r2": 0.6971904130879161
+            },
+            {
+              "target": "tensile_strength_mpa",
+              "best_model": "random_forest",
+              "mae": 5.999570191403829,
+              "rmse": 7.554269871420336,
+              "r2": -0.07719796749429886
+            },
+            {
+              "target": "mode_ii_energy_release_rate_reported_kj_m2",
+              "best_model": "mean",
+              "mae": 419.15903361344533,
+              "rmse": 560.6843796403106,
+              "r2": -0.6032112536891245
+            }
+          ]
+        },
+        "notes": "已完成官方数据版本 1 的独立分组基线。指标来自完整留出 CFRP 材料类型的 OOF 预测，不与论文逐行 LOOCV 数值直接比较，也不代表本构模型精度。"
       }
     },
     {

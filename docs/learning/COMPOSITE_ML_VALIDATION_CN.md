@@ -128,7 +128,7 @@ material_ai_workbench/resources/composite_benchmarks.json
 ### 4.2 实验性能回归
 
 1. Shah 等使用 NCAMP 单向碳纤维层合材料实验数据，把环境和固化循环纳入输入，论文报告模量预测最高 `R2=0.98`。DOI：[10.1039/D2MA00698G](https://pubs.rsc.org/en/content/articlelanding/2022/ma/d2ma00698g)。
-2. Alsheghri 等制造并测试了 62 个、九类 CFRP 试样，比较 Ridge、Random Forest 和 SVR；论文报告弯曲强度、弯曲模量和 II 型能量释放率的 `R2` 分别为 0.966、0.871 和 0.903。文章与数据均公开：[论文](https://pmc.ncbi.nlm.nih.gov/articles/PMC11975104/)、[Mendeley 数据](https://data.mendeley.com/datasets/fspdwb4mst/1)。
+2. Alsheghri 等制造并测试了 62 个、九类 CFRP 试样，比较 Ridge、Random Forest 和 SVR；论文报告弯曲强度、弯曲模量和 II 型能量释放率的 `R2` 分别为 0.966、0.871 和 0.903。文章与数据均公开：[论文](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0319787)、[Mendeley 数据](https://data.mendeley.com/datasets/fspdwb4mst/1)。本站的受控导入、哈希和分组折见 [CFRP 公开实验数据教程](CFRP_EXPERIMENTAL_DATASET_CN.md)。
 3. Liu 等公开了碳-环氧斜纹编织复材的拉伸、剪切和压缩曲线、强度、模量和泊松比，可用于 Abaqus 材料卡校准与外部验证。DOI：[10.1016/j.dib.2022.108650](https://doi.org/10.1016/j.dib.2022.108650)。
 4. Hasebe 等公开了不同铺层、冲头形状和冲击能量下的 CFRP 冲击后压缩数据，适合后续预测 CAI 强度与强度降低率。DOI：[10.1016/j.dib.2025.111509](https://pubmed.ncbi.nlm.nih.gov/40235700/)。
 
@@ -231,7 +231,7 @@ material_ai_workbench/resources/composite_benchmarks.json
 
 执行顺序：
 
-1. 下载 Mendeley 数据并保存原始文件哈希；
+1. 运行 `materialai-cfrp-data --accept-license`，由程序核验 Mendeley 元数据和原始文件哈希；
 2. 建立四个输入变量和三个回归目标的数据字典；
 3. 按 CFRP 类型做 GroupKFold 或留一类型验证；
 4. 先跑均值、Ridge，再跑 RF、SVR 和 MLP；
