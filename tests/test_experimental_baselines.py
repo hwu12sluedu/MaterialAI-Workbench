@@ -23,7 +23,11 @@ from material_ai_workbench.experimental_datasets import (
     SOURCE_HEADERS,
     prepare_cfrp_experimental_dataset,
 )
+from material_ai_workbench.experimental_validation import run_cfrp_validation_audit
 from material_ai_workbench.run_experimental_baselines import main as baseline_cli_main
+from material_ai_workbench.run_experimental_validation import (
+    main as validation_audit_cli_main,
+)
 
 
 def _sha256(path: Path) -> str:
@@ -101,6 +105,24 @@ def _refresh_manifest_artifact(dataset_dir: Path, artifact_name: str) -> None:
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+
+
+def _make_exact_duplicate(
+    dataset_dir: Path, *, retained_sample_id: str, duplicate_sample_id: str
+) -> None:
+    normalized = dataset_dir / "derived" / "cfrp_experimental_normalized.csv"
+    rows = _read_csv(normalized)
+    by_id = {row["sample_id"]: row for row in rows}
+    retained = by_id[retained_sample_id]
+    duplicate = by_id[duplicate_sample_id]
+    for column in rows[0]:
+        if column not in {"sample_id", "source_row"}:
+            duplicate[column] = retained[column]
+    with normalized.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+    _refresh_manifest_artifact(dataset_dir, "normalized_csv")
 
 
 def test_grouped_baselines_write_oof_metrics_models_and_figures(tmp_path: Path) -> None:
@@ -256,6 +278,123 @@ def test_baseline_cli_emits_structured_success_and_error(
     assert payload["best_models_by_grouped_mae"] == {"flexural_strength_mpa": "mean"}
 
     exit_code = baseline_cli_main(
+        ["--dataset-dir", str(tmp_path / "missing"), "--model", "mean"]
+    )
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert captured.out == ""
+    assert json.loads(captured.err)["status"] == "error"
+
+
+def test_validation_audit_compares_protocols_and_flags_duplicate_leakage(
+    tmp_path: Path,
+) -> None:
+    dataset_dir = _prepare_dataset(tmp_path / "source")
+    _make_exact_duplicate(
+        dataset_dir,
+        retained_sample_id="cfrp_type_01_sample_01",
+        duplicate_sample_id="cfrp_type_01_sample_02",
+    )
+
+    run = run_cfrp_validation_audit(
+        dataset_dir,
+        output_root=tmp_path / "audits",
+        targets=("flexural_strength_mpa",),
+        models=("mean", "ridge"),
+        random_state=7,
+        rf_estimators=10,
+    )
+
+    assert run.manifest_json.exists()
+    assert run.summary_json.exists()
+    assert run.comparison_csv.exists()
+    assert run.predictions_csv.exists()
+    assert run.duplicate_clusters_csv.exists()
+    assert run.report_md.exists()
+    assert len(run.figure_paths) == 1
+    assert run.figure_paths[0].stat().st_size > 0
+
+    duplicates = _read_csv(run.duplicate_clusters_csv)
+    assert len(duplicates) == 1
+    assert duplicates[0]["record_count"] == "2"
+    assert duplicates[0]["duplicate_extra_count"] == "1"
+    assert duplicates[0]["retained_sample_id"] == "cfrp_type_01_sample_01"
+    assert duplicates[0]["removed_sample_ids"] == "cfrp_type_01_sample_02"
+
+    comparison = _read_csv(run.comparison_csv)
+    assert len(comparison) == 8
+    assert {row["protocol"] for row in comparison} == {
+        "grouped_raw",
+        "grouped_deduplicated",
+        "row_loocv_raw",
+        "row_loocv_deduplicated",
+    }
+    assert {
+        int(row["sample_count"])
+        for row in comparison
+        if row["protocol"].endswith("deduplicated")
+    } == {61}
+    assert {
+        int(row["duplicate_leakage_sample_count"])
+        for row in comparison
+        if row["protocol"] == "row_loocv_raw"
+    } == {2}
+    assert {
+        int(row["duplicate_leakage_sample_count"])
+        for row in comparison
+        if row["protocol"] != "row_loocv_raw"
+    } == {0}
+
+    predictions = _read_csv(run.predictions_csv)
+    assert len(predictions) == 492
+    leaking_ids = {
+        row["sample_id"]
+        for row in predictions
+        if row["protocol"] == "row_loocv_raw"
+        and row["model"] == "ridge"
+        and row["exact_duplicate_in_training"] == "True"
+    }
+    assert leaking_ids == {
+        "cfrp_type_01_sample_01",
+        "cfrp_type_01_sample_02",
+    }
+    assert not any(
+        row["exact_duplicate_in_training"] == "True"
+        for row in predictions
+        if row["protocol"] == "grouped_raw"
+    )
+
+    assert run.summary["release_gate_protocol"] == "grouped_raw"
+    assert run.summary["duplicate_audit"]["duplicate_extra_rows"] == 1
+    assert run.summary["paper_comparison"]["status"] == "not_directly_comparable"
+
+
+def test_validation_audit_cli_emits_structured_success_and_error(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    dataset_dir = _prepare_dataset(tmp_path / "source")
+    exit_code = validation_audit_cli_main(
+        [
+            "--dataset-dir",
+            str(dataset_dir),
+            "--output-root",
+            str(tmp_path / "audits"),
+            "--target",
+            "flexural_strength_mpa",
+            "--model",
+            "mean",
+            "--rf-estimators",
+            "10",
+        ]
+    )
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert captured.err == ""
+    payload = json.loads(captured.out)
+    assert payload["status"] == "completed_with_warnings"
+    assert payload["release_gate_protocol"] == "grouped_raw"
+
+    exit_code = validation_audit_cli_main(
         ["--dataset-dir", str(tmp_path / "missing"), "--model", "mean"]
     )
     captured = capsys.readouterr()

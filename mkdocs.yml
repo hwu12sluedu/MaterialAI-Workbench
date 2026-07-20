@@ -23,6 +23,7 @@ nav:
       - 复合材料 ML 任务与验证: learning/COMPOSITE_ML_VALIDATION_CN.md
       - CFRP 公开实验数据: learning/CFRP_EXPERIMENTAL_DATASET_CN.md
       - CFRP 分组基线训练: learning/CFRP_GROUPED_BASELINES_CN.md
+      - CFRP 验证协议审计: learning/CFRP_VALIDATION_AUDIT_CN.md
       - Notebook 与源码精读: learning/PYLABFEA_NOTEBOOK_SOURCE_WALKTHROUGH_CN.md
       - 有限元深度学习路线: learning/PYLABFEA_TO_FE_DEEP_LEARNING_TUTORIAL_CN.md
       - Barlat Yld2000 到 Yld2004: learning/BARLAT_YLD2000_TO_YLD2004_CN.md
@@ -32,6 +33,7 @@ nav:
       - 案例智能 API: api/CASE_INTELLIGENCE_API_CN.md
       - CFRP 实验数据 API: api/EXPERIMENTAL_DATASET_API_CN.md
       - CFRP 分组基线 API: api/EXPERIMENTAL_BASELINE_API_CN.md
+      - CFRP 验证协议审计 API: api/EXPERIMENTAL_VALIDATION_API_CN.md
       - pyLabFEA 与产品层: api/PYLABFEA_MATERIALAI_BRIDGE_CN.md
       - API 清单: api/API_INVENTORY_CN.md
   - 开发:

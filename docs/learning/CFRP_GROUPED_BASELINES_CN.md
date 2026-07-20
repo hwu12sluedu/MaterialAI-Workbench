@@ -149,7 +149,7 @@ workspace/experiments/cfrp_grouped_baselines/<run_id>/
 
 ## 11. 下一步
 
-1. 增加逐行 LOOCV 作为“论文协议对照”，与严格分组验证并排展示。
+1. 已增加逐行 LOOCV 与严格分组验证对照，并完成重复样本敏感性审计；见 [CFRP 验证协议与重复样本审计](CFRP_VALIDATION_AUDIT_CN.md)。
 2. 对重复样本执行保留/去重敏感性分析。
 3. 在外层折内部做有限的嵌套超参数选择，不触碰测试材料类型。
 4. 把 RVE/PBC 生成的有效刚度和界面特征接入同一数据契约。

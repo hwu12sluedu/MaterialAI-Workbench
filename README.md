@@ -101,6 +101,12 @@ conda run -n pylabfea materialai-cfrp-data --accept-license
 conda run -n pylabfea materialai-cfrp-baseline
 ```
 
+对比整类材料留出、逐行 LOOCV 及去重敏感性：
+
+```powershell
+conda run -n pylabfea materialai-cfrp-validation-audit
+```
+
 本机验证：
 
 ```powershell
@@ -125,6 +131,7 @@ python -m build
 - [复合材料机器学习：任务定义与可信验证](docs/learning/COMPOSITE_ML_VALIDATION_CN.md)
 - [CFRP 公开实验数据：受控导入与可信划分](docs/learning/CFRP_EXPERIMENTAL_DATASET_CN.md)
 - [CFRP 分组基线：从真实数据到可信代理模型](docs/learning/CFRP_GROUPED_BASELINES_CN.md)
+- [CFRP 验证协议与重复样本审计](docs/learning/CFRP_VALIDATION_AUDIT_CN.md)
 - [pyLabFEA Notebook 与源码精读](docs/learning/PYLABFEA_NOTEBOOK_SOURCE_WALKTHROUGH_CN.md)
 - [从 pyLabFEA 到有限元深度学习](docs/learning/PYLABFEA_TO_FE_DEEP_LEARNING_TUTORIAL_CN.md)
 - [API 使用文档](docs/api/README_CN.md)

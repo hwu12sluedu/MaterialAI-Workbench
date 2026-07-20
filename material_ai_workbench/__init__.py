@@ -22,6 +22,10 @@ from .experimental_baselines import (
     ExperimentalBaselineRun,
     train_cfrp_grouped_baselines,
 )
+from .experimental_validation import (
+    ExperimentalValidationAudit,
+    run_cfrp_validation_audit,
+)
 from .pipeline import WorkbenchConfig, WorkbenchResult, run_material_workbench
 from .job_queue import JobQueue, QueuedJob
 from .multi_fidelity import MultiFidelityResult, train_multi_fidelity
@@ -37,6 +41,7 @@ __all__ = [
     "CompositeBatchConfig",
     "ExperimentalDatasetResult",
     "ExperimentalBaselineRun",
+    "ExperimentalValidationAudit",
     "WorkbenchConfig",
     "WorkbenchResult",
     "JobQueue",
@@ -47,6 +52,7 @@ __all__ = [
     "load_composite_benchmarks",
     "prepare_cfrp_experimental_dataset",
     "train_cfrp_grouped_baselines",
+    "run_cfrp_validation_audit",
     "run_composite_batch_plan",
     "train_composite_surrogate",
     "run_composite_plate_workflow",

@@ -9,6 +9,8 @@
 - `materialai-cfrp-data` CLI plus Chinese data-governance tutorial, data card and API documentation.
 - Leakage-resistant CFRP Mean/Ridge/Random Forest/SVR baselines with fixed material-type folds, nested group-residual intervals, OOF evidence tables, model cards and a Chinese report.
 - `materialai-cfrp-baseline` CLI and a documented `baseline_completed` benchmark status that does not overstate paper reproduction.
+- Validation-protocol audit comparing material-group holdout and row LOOCV on raw and exactly deduplicated CFRP views, with per-sample duplicate-leakage evidence.
+- `materialai-cfrp-validation-audit` CLI, protocol-sensitivity figures, Chinese report and learning/API documentation.
 
 ### Changed
 

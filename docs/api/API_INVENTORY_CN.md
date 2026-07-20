@@ -4,9 +4,9 @@
 
 ## 统计
 
-- 模块数：54
-- 顶层公开函数：239
-- 公开类：62
+- 模块数：56
+- 顶层公开函数：242
+- 公开类：63
 - 公开类方法：89
 
 ## 使用方式
@@ -770,6 +770,25 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 - 行号：202
 
 
+## `material_ai_workbench.experimental_validation`
+
+- 文件：`material_ai_workbench/experimental_validation.py`
+- 模块说明：Validation-protocol and duplicate-sensitivity audit for CFRP regressors.
+
+### 顶层函数
+
+| 函数 | 行号 | 说明 |
+|---|---:|---|
+| `run_cfrp_validation_audit(dataset_dir: Path \| str = DEFAULT_DATASET_DIR, *, output_root: Path \| str = DEFAULT_OUTPUT_ROOT, targets: Sequence[str] \| None = None, models: Sequence[str] = DEFAULT_MODELS, random_state: int = 42, rf_estimators: int = 100)` | 99 | Compare strict group holdout and row LOOCV before and after deduplication. |
+
+### 类与方法
+
+#### `ExperimentalValidationAudit`
+
+- 行号：85
+- 说明：Artifacts produced by one validation-protocol audit.
+
+
 ## `material_ai_workbench.job_queue`
 
 - 文件：`material_ai_workbench/job_queue.py`
@@ -1111,6 +1130,18 @@ conda run -n pylabfea python tools/generate_api_inventory.py
 |---|---:|---|
 | `build_parser()` | 18 | Build the command-line parser. |
 | `main(argv: Sequence[str] \| None = None)` | 46 | Prepare the dataset and emit a machine-readable result. |
+
+## `material_ai_workbench.run_experimental_validation`
+
+- 文件：`material_ai_workbench/run_experimental_validation.py`
+- 模块说明：Audit CFRP validation protocols and exact-duplicate sensitivity.
+
+### 顶层函数
+
+| 函数 | 行号 | 说明 |
+|---|---:|---|
+| `build_parser()` | 22 | Build the command-line parser. |
+| `main(argv: Sequence[str] \| None = None)` | 57 | Run the audit and emit a machine-readable result. |
 
 ## `material_ai_workbench.run_metal_closed_loop`
 
